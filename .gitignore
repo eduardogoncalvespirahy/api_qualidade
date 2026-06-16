@@ -1,0 +1,8 @@
+# Ignora dependências de pacotes (baixadas automaticamente)
+node_modules/
+
+# Ignora pastas de build e compilação
+dist/
+
+# Ignora arquivos de ambiente com senhas ou chaves
+.env
