@@ -8,6 +8,7 @@ import systemRoutes from "./system.routes";
 import roleRoutes from "./role.routes";
 import sectionRoutes from "./section.routes";
 import formRoutes from "./form.routes";
+import locationRoutes from "./location.routes";
 import answerRoutes from "./answer.routes";
 import machineRoutes from "./machine.routes";
 
@@ -35,6 +36,7 @@ router.use("/systems", systemRoutes);
 router.use("/roles", roleRoutes);
 router.use("/sections", sectionRoutes);
 router.use("/forms", formRoutes);
+router.use("/locations", locationRoutes);
 router.use("/answers", answerRoutes);
 router.use("/machines", machineRoutes);
 
