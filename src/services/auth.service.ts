@@ -1,3 +1,4 @@
+import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
@@ -10,6 +11,9 @@ import { SessionRepository } from "../repositories/session.repository";
 import { LoginDTO, LoginResponseDTO } from "../models/auth.model";
 import { JwtPayload } from "../models/jwt.model";
 
+dotenv.config();
+
+const SYSTEM_ID = String(process.env.SYSTEM_ID);
 const REFRESH_TTL_DAYS = 7;
 
 export class AuthService {
@@ -35,10 +39,10 @@ export class AuthService {
       : null;
 
     if (!user) {
-      throw new Error("Credenciais inválidas");
+      throw new Error(`Usuario ${dto.email??dto.username??dto.registerNumber} não encontrado`);
     }
 
-    console.log('User: ',user);
+    // dto.systemId = dto.systemId ? dto.systemId : String(SYSTEM_ID);
 
     const credential = dto.systemId
       ? await this.credentials.findByUserAndSystem(user.id, dto.systemId)
