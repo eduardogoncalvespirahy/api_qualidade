@@ -358,7 +358,7 @@ export class SeniorSyncService {
                 ) {
                     await client.query(
                         `
-                          DELETE FROM employees
+                          DELETE FROM teste.employees
                           WHERE id = ANY($1)
                         `,
                         [removedIds],
