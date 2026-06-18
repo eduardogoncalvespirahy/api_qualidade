@@ -3,18 +3,23 @@ import { PaginatedResult } from "../models/paginate.model";
 import {
   Department,
   CreateDepartmentDTO,
-  UpdateDepartmentDTO
+  UpdateDepartmentDTO,
 } from "../models/department.model";
 import { RedisRepository } from "./redis.repository";
 
 const cache = new RedisRepository();
 
-const CACHE_TTL = (60 * 60) * 24; // 24 horas
+const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 const cacheKeys = {
   byId: (id: string) => `departments:${id}`,
-  paginated: (page: number, limit: number) => `departments:page:${page}:limit:${limit}`,
-  paginatedPattern: () => "departments:page:*",
+
+  all: () => "departments:all",
+
+  paginated: (page: number, limit: number) =>
+    `departments:page:${page}:limit:${limit}`,
+
+  listPattern: () => "departments:*",
 };
 
 const SELECT_COLUMNS = `
@@ -23,76 +28,113 @@ const SELECT_COLUMNS = `
 `;
 
 export class DepartmentRepository {
+  private async invalidateListCache(): Promise<void> {
+    await cache.deleteByPattern(cacheKeys.listPattern());
+  }
+
   async create(dto: CreateDepartmentDTO): Promise<Department> {
     const result = await pool.query<Department>(
       `
-      INSERT INTO teste.departments (id, name)
-      VALUES ($1, $2)
-      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+      INSERT INTO teste.departments
+      (
+        id,
+        name
+      )
+      VALUES
+      (
+        $1,
+        $2
+      )
+      ON CONFLICT (id)
+      DO UPDATE SET
+        name = EXCLUDED.name
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.id, dto.name ?? null]
+      [dto.id, dto.name ?? null],
     );
 
-    const row = result.rows[0];
+    const department = result.rows[0];
 
     await Promise.all([
-      cache.set(cacheKeys.byId(row.id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(department.id), department, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return department;
   }
 
   async findById(id: string): Promise<Department | null> {
-    const key = cacheKeys.byId(id);
+    const cacheKey = cacheKeys.byId(id);
 
-    const cached = await cache.get<Department>(key);
-    if (cached) {
-      console.log("Cache HIT departments:", id);
-      return cached;
-    }
+    const cached = await cache.get<Department>(cacheKey);
 
-    const result = await pool.query<Department>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.departments WHERE id = $1`,
-      [id]
-    );
-
-    const row = result.rows[0];
-    if (!row) {
-      return null;
-    }
-
-    await cache.set(key, row, CACHE_TTL);
-    return row;
-  }
-
-  async findAll(
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResult<Department>> {
-    const cacheKey = cacheKeys.paginated(page, limit);
-
-    const cached = await cache.get<PaginatedResult<Department>>(cacheKey);
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
-    const offset = (page - 1) * limit;
+    const result = await pool.query<Department>(
+      `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.departments
+      WHERE id = $1
+      `,
+      [id],
+    );
+
+    const department = result.rows[0];
+
+    if (!department) {
+      return null;
+    }
+
+    await cache.set(cacheKey, department, CACHE_TTL);
+
+    return department;
+  }
+
+  async findAll(
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<Department>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
+
+    const cacheKey = isPaginated
+      ? cacheKeys.paginated(page, limit)
+      : cacheKeys.all();
+
+    const cached = await cache.get<PaginatedResult<Department>>(cacheKey);
+
+    if (cached) {
+      console.log("Cache HIT:", cacheKey);
+      return cached;
+    }
+
+    let query = `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.departments
+      ORDER BY id ASC
+    `;
+
+    const params: unknown[] = [];
+
+    if (isPaginated) {
+      query += `
+        LIMIT $1
+        OFFSET $2
+      `;
+
+      params.push(limit, (page - 1) * limit);
+    }
 
     const [rowsResult, countResult] = await Promise.all([
-      pool.query<Department>(
-        `
-        SELECT ${SELECT_COLUMNS}
-        FROM teste.departments
-        ORDER BY id ASC
-        LIMIT $1 OFFSET $2
-        `,
-        [limit, offset]
-      ),
+      pool.query<Department>(query, params),
       pool.query<{ total: string }>(
-        `SELECT COUNT(*) as total FROM teste.departments`
+        `
+        SELECT COUNT(*) AS total
+        FROM teste.departments
+        `,
       ),
     ]);
 
@@ -101,52 +143,65 @@ export class DepartmentRepository {
     const response: PaginatedResult<Department> = {
       data: rowsResult.rows,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: isPaginated ? page : null,
+      limit: isPaginated ? limit : null,
+      totalPages: isPaginated ? Math.ceil(total / limit) : null,
     };
 
     await cache.set(cacheKey, response, CACHE_TTL);
+
     return response;
   }
 
-  async update(id: string, dto: UpdateDepartmentDTO): Promise<Department | null> {
+  async update(
+    id: string,
+    dto: UpdateDepartmentDTO,
+  ): Promise<Department | null> {
     const result = await pool.query<Department>(
       `
       UPDATE teste.departments
-      SET name = COALESCE($2, name)
+      SET
+        name = COALESCE($2, name)
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
       `,
-      [id, dto.name ?? null]
+      [id, dto.name ?? null],
     );
 
-    const row = result.rows[0] ?? null;
-    if (!row) {
+    const department = result.rows[0];
+
+    if (!department) {
       return null;
     }
 
     await Promise.all([
-      cache.set(cacheKeys.byId(id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(id), department, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return department;
   }
 
   async delete(id: string): Promise<Department | null> {
-    const existing = await this.findById(id);
-    if (!existing) {
+    const department = await this.findById(id);
+
+    if (!department) {
       return null;
     }
 
-    await pool.query(`DELETE FROM teste.departments WHERE id = $1`, [id]);
+    await pool.query(
+      `
+      DELETE FROM teste.departments
+      WHERE id = $1
+      `,
+      [id],
+    );
 
     await Promise.all([
       cache.delete(cacheKeys.byId(id)),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      this.invalidateListCache(),
     ]);
 
-    return existing;
+    return department;
   }
 }

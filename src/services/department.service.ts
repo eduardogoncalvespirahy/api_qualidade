@@ -21,8 +21,8 @@ export class DepartmentService {
   }
 
   async findAll(
-    page: number = 1,
-    limit: number = 10
+    page?: number,
+    limit?: number
   ): Promise<PaginatedResult<Department>> {
     return this.repository.findAll(page, limit);
   }

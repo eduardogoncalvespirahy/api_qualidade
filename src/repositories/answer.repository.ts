@@ -3,18 +3,23 @@ import { PaginatedResult } from "../models/paginate.model";
 import {
   Answer,
   CreateAnswerDTO,
-  UpdateAnswerDTO
+  UpdateAnswerDTO,
 } from "../models/answer.model";
 import { RedisRepository } from "./redis.repository";
 
 const cache = new RedisRepository();
 
-const CACHE_TTL = (60 * 60) * 24; // 24 horas
+const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 const cacheKeys = {
   byId: (id: string) => `answers:${id}`,
-  paginated: (page: number, limit: number) => `answers:page:${page}:limit:${limit}`,
-  paginatedPattern: () => "answers:page:*",
+
+  all: () => "answers:all",
+
+  paginated: (page: number, limit: number) =>
+    `answers:page:${page}:limit:${limit}`,
+
+  listPattern: () => "answers:*",
 };
 
 const SELECT_COLUMNS = `
@@ -28,76 +33,114 @@ const SELECT_COLUMNS = `
 `;
 
 export class AnswerRepository {
+  private async invalidateListCache(): Promise<void> {
+    await cache.deleteByPattern(cacheKeys.listPattern());
+  }
+
   async create(dto: CreateAnswerDTO): Promise<Answer> {
     const result = await pool.query<Answer>(
       `
       INSERT INTO teste.answers
-        (form_id, nome, descricao, status)
-      VALUES ($1, $2, $3, COALESCE($4, 1))
+      (
+        form_id,
+        nome,
+        descricao,
+        status
+      )
+      VALUES
+      (
+        $1,
+        $2,
+        $3,
+        COALESCE($4, 1)
+      )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.formId, dto.nome, dto.descricao ?? null, dto.status ?? null]
+      [dto.formId, dto.nome, dto.descricao ?? null, dto.status ?? null],
     );
 
-    const row = result.rows[0];
+    const answer = result.rows[0];
 
     await Promise.all([
-      cache.set(cacheKeys.byId(row.id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(answer.id), answer, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return answer;
   }
 
   async findById(id: string): Promise<Answer | null> {
-    const key = cacheKeys.byId(id);
+    const cacheKey = cacheKeys.byId(id);
 
-    const cached = await cache.get<Answer>(key);
-    if (cached) {
-      console.log("Cache HIT answers:", id);
-      return cached;
-    }
+    const cached = await cache.get<Answer>(cacheKey);
 
-    const result = await pool.query<Answer>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.answers WHERE id = $1`,
-      [id]
-    );
-
-    const row = result.rows[0];
-    if (!row) {
-      return null;
-    }
-
-    await cache.set(key, row, CACHE_TTL);
-    return row;
-  }
-
-  async findAll(
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResult<Answer>> {
-    const cacheKey = cacheKeys.paginated(page, limit);
-
-    const cached = await cache.get<PaginatedResult<Answer>>(cacheKey);
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
-    const offset = (page - 1) * limit;
+    const result = await pool.query<Answer>(
+      `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.answers
+      WHERE id = $1
+      `,
+      [id],
+    );
+
+    const answer = result.rows[0];
+
+    if (!answer) {
+      return null;
+    }
+
+    await cache.set(cacheKey, answer, CACHE_TTL);
+
+    return answer;
+  }
+
+  async findAll(
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<Answer>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
+
+    const cacheKey = isPaginated
+      ? cacheKeys.paginated(page, limit)
+      : cacheKeys.all();
+
+    const cached = await cache.get<PaginatedResult<Answer>>(cacheKey);
+
+    if (cached) {
+      console.log("Cache HIT:", cacheKey);
+      return cached;
+    }
+
+    let query = `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.answers
+      ORDER BY data_criacao DESC
+    `;
+
+    const params: unknown[] = [];
+
+    if (isPaginated) {
+      query += `
+        LIMIT $1
+        OFFSET $2
+      `;
+
+      params.push(limit, (page - 1) * limit);
+    }
 
     const [rowsResult, countResult] = await Promise.all([
-      pool.query<Answer>(
-        `
-        SELECT ${SELECT_COLUMNS}
-        FROM teste.answers
-        ORDER BY data_criacao DESC
-        LIMIT $1 OFFSET $2
-        `,
-        [limit, offset]
-      ),
+      pool.query<Answer>(query, params),
       pool.query<{ total: string }>(
-        `SELECT COUNT(*) as total FROM teste.answers`
+        `
+        SELECT COUNT(*) AS total
+        FROM teste.answers
+        `,
       ),
     ]);
 
@@ -106,12 +149,13 @@ export class AnswerRepository {
     const response: PaginatedResult<Answer> = {
       data: rowsResult.rows,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: isPaginated ? page : null,
+      limit: isPaginated ? limit : null,
+      totalPages: isPaginated ? Math.ceil(total / limit) : null,
     };
 
     await cache.set(cacheKey, response, CACHE_TTL);
+
     return response;
   }
 
@@ -128,35 +172,49 @@ export class AnswerRepository {
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
       `,
-      [id, dto.formId ?? null, dto.nome ?? null, dto.descricao ?? null, dto.status ?? null]
+      [
+        id,
+        dto.formId ?? null,
+        dto.nome ?? null,
+        dto.descricao ?? null,
+        dto.status ?? null,
+      ],
     );
 
-    const row = result.rows[0] ?? null;
-    if (!row) {
+    const answer = result.rows[0];
+
+    if (!answer) {
       return null;
     }
 
     await Promise.all([
-      cache.set(cacheKeys.byId(id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(id), answer, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return answer;
   }
 
   async delete(id: string): Promise<Answer | null> {
-    const existing = await this.findById(id);
-    if (!existing) {
+    const answer = await this.findById(id);
+
+    if (!answer) {
       return null;
     }
 
-    await pool.query(`DELETE FROM teste.answers WHERE id = $1`, [id]);
+    await pool.query(
+      `
+      DELETE FROM teste.answers
+      WHERE id = $1
+      `,
+      [id],
+    );
 
     await Promise.all([
       cache.delete(cacheKeys.byId(id)),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      this.invalidateListCache(),
     ]);
 
-    return existing;
+    return answer;
   }
 }

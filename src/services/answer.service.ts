@@ -24,8 +24,8 @@ export class AnswerService {
   }
 
   async findAll(
-    page: number = 1,
-    limit: number = 10
+    page?: number,
+    limit?: number
   ): Promise<PaginatedResult<Answer>> {
     return this.repository.findAll(page, limit);
   }

@@ -24,8 +24,8 @@ export class LocationService {
   }
 
   async findAll(
-    page: number = 1,
-    limit: number = 10
+    page?: number,
+    limit?: number
   ): Promise<PaginatedResult<Location>> {
     return this.repository.findAll(page, limit);
   }

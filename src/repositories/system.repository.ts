@@ -3,18 +3,23 @@ import { PaginatedResult } from "../models/paginate.model";
 import {
   System,
   CreateSystemDTO,
-  UpdateSystemDTO
+  UpdateSystemDTO,
 } from "../models/system.model";
 import { RedisRepository } from "./redis.repository";
 
 const cache = new RedisRepository();
 
-const CACHE_TTL = (60 * 60) * 24; // 24 horas
+const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 const cacheKeys = {
   byId: (id: string) => `systems:${id}`,
-  paginated: (page: number, limit: number) => `systems:page:${page}:limit:${limit}`,
-  paginatedPattern: () => "systems:page:*",
+
+  all: () => "systems:all",
+
+  paginated: (page: number, limit: number) =>
+    `systems:page:${page}:limit:${limit}`,
+
+  listPattern: () => "systems:*",
 };
 
 const SELECT_COLUMNS = `
@@ -28,76 +33,114 @@ const SELECT_COLUMNS = `
 `;
 
 export class SystemRepository {
+  private async invalidateListCache(): Promise<void> {
+    await cache.deleteByPattern(cacheKeys.listPattern());
+  }
+
   async create(dto: CreateSystemDTO): Promise<System> {
     const result = await pool.query<System>(
       `
       INSERT INTO teste.systems
-        (nome, descricao, url, status)
-      VALUES ($1, $2, $3, COALESCE($4, 1))
+      (
+        nome,
+        descricao,
+        url,
+        status
+      )
+      VALUES
+      (
+        $1,
+        $2,
+        $3,
+        COALESCE($4, 1)
+      )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.nome, dto.descricao ?? null, dto.url ?? null, dto.status ?? null]
+      [dto.nome, dto.descricao ?? null, dto.url ?? null, dto.status ?? null],
     );
 
-    const row = result.rows[0];
+    const system = result.rows[0];
 
     await Promise.all([
-      cache.set(cacheKeys.byId(row.id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(system.id), system, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return system;
   }
 
   async findById(id: string): Promise<System | null> {
-    const key = cacheKeys.byId(id);
+    const cacheKey = cacheKeys.byId(id);
 
-    const cached = await cache.get<System>(key);
-    if (cached) {
-      console.log("Cache HIT systems:", id);
-      return cached;
-    }
+    const cached = await cache.get<System>(cacheKey);
 
-    const result = await pool.query<System>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.systems WHERE id = $1`,
-      [id]
-    );
-
-    const row = result.rows[0];
-    if (!row) {
-      return null;
-    }
-
-    await cache.set(key, row, CACHE_TTL);
-    return row;
-  }
-
-  async findAll(
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResult<System>> {
-    const cacheKey = cacheKeys.paginated(page, limit);
-
-    const cached = await cache.get<PaginatedResult<System>>(cacheKey);
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
-    const offset = (page - 1) * limit;
+    const result = await pool.query<System>(
+      `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.systems
+      WHERE id = $1
+      `,
+      [id],
+    );
+
+    const system = result.rows[0];
+
+    if (!system) {
+      return null;
+    }
+
+    await cache.set(cacheKey, system, CACHE_TTL);
+
+    return system;
+  }
+
+  async findAll(
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<System>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
+
+    const cacheKey = isPaginated
+      ? cacheKeys.paginated(page, limit)
+      : cacheKeys.all();
+
+    const cached = await cache.get<PaginatedResult<System>>(cacheKey);
+
+    if (cached) {
+      console.log("Cache HIT:", cacheKey);
+      return cached;
+    }
+
+    let query = `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.systems
+      ORDER BY data_criacao DESC
+    `;
+
+    const params: any[] = [];
+
+    if (isPaginated) {
+      query += `
+        LIMIT $1
+        OFFSET $2
+      `;
+
+      params.push(limit, (page - 1) * limit);
+    }
 
     const [rowsResult, countResult] = await Promise.all([
-      pool.query<System>(
-        `
-        SELECT ${SELECT_COLUMNS}
-        FROM teste.systems
-        ORDER BY data_criacao DESC
-        LIMIT $1 OFFSET $2
-        `,
-        [limit, offset]
-      ),
+      pool.query<System>(query, params),
       pool.query<{ total: string }>(
-        `SELECT COUNT(*) as total FROM teste.systems`
+        `
+        SELECT COUNT(*) AS total
+        FROM teste.systems
+        `,
       ),
     ]);
 
@@ -106,12 +149,13 @@ export class SystemRepository {
     const response: PaginatedResult<System> = {
       data: rowsResult.rows,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: isPaginated ? page : null,
+      limit: isPaginated ? limit : null,
+      totalPages: isPaginated ? Math.ceil(total / limit) : null,
     };
 
     await cache.set(cacheKey, response, CACHE_TTL);
+
     return response;
   }
 
@@ -128,35 +172,49 @@ export class SystemRepository {
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
       `,
-      [id, dto.nome ?? null, dto.descricao ?? null, dto.url ?? null, dto.status ?? null]
+      [
+        id,
+        dto.nome ?? null,
+        dto.descricao ?? null,
+        dto.url ?? null,
+        dto.status ?? null,
+      ],
     );
 
-    const row = result.rows[0] ?? null;
-    if (!row) {
+    const system = result.rows[0];
+
+    if (!system) {
       return null;
     }
 
     await Promise.all([
-      cache.set(cacheKeys.byId(id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(id), system, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return system;
   }
 
   async delete(id: string): Promise<System | null> {
-    const existing = await this.findById(id);
-    if (!existing) {
+    const system = await this.findById(id);
+
+    if (!system) {
       return null;
     }
 
-    await pool.query(`DELETE FROM teste.systems WHERE id = $1`, [id]);
+    await pool.query(
+      `
+      DELETE FROM teste.systems
+      WHERE id = $1
+      `,
+      [id],
+    );
 
     await Promise.all([
       cache.delete(cacheKeys.byId(id)),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      this.invalidateListCache(),
     ]);
 
-    return existing;
+    return system;
   }
 }

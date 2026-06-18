@@ -1,25 +1,30 @@
 import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
-import {
-  User,
-  CreateUserDTO,
-  UpdateUserDTO
-} from "../models/user.model";
+import { User, CreateUserDTO, UpdateUserDTO } from "../models/user.model";
 import { RedisRepository } from "./redis.repository";
 import { EmployeeRepository } from "./employee.repository";
 
 const cache = new RedisRepository();
 const employee = new EmployeeRepository();
 
-const CACHE_TTL = (60 * 60) * 24; // 24 horas
+const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 const cacheKeys = {
-  byId: (id: string) => `user:${id}`,
-  byUsername: (username: string) => `user_username:${username}`,
-  byEmail: (email: string) => `user_email:${email}`,
-  byRegisterNumber: (registerNumber: number | string) => `user_register:${registerNumber}`,
-  paginated: (page: number, limit: number) => `users:page:${page}:limit:${limit}`,
-  paginatedPattern: () => "users:page:*",
+  byId: (id: string) => `users:${id}`,
+
+  byUsername: (username: string) => `users:username:${username}`,
+
+  byEmail: (email: string) => `users:email:${email}`,
+
+  byRegisterNumber: (registerNumber: string | number) =>
+    `users:register:${registerNumber}`,
+
+  all: () => "users:all",
+
+  paginated: (page: number, limit: number) =>
+    `users:page:${page}:limit:${limit}`,
+
+  listPattern: () => "users:*",
 };
 
 const SELECT_COLUMNS = `
@@ -33,127 +38,180 @@ const SELECT_COLUMNS = `
 `;
 
 export class UserRepository {
+  private async invalidateListCache(): Promise<void> {
+    await cache.deleteByPattern(cacheKeys.listPattern());
+  }
 
-  private async getRegisterNumber(employeeId: string): Promise<any> {
+  private async getRegisterNumber(
+    employeeId: string,
+  ): Promise<string | number | null> {
     const employeeEntity = await employee.findById(employeeId);
-    const registerNumber = employeeEntity?.registerNumber;
-    return registerNumber;
+
+    return employeeEntity?.registerNumber ?? null;
   }
 
   private async cacheUser(user: User): Promise<void> {
-    await Promise.all([
+    const registerNumber = await this.getRegisterNumber(user.employeeId);
+
+    const operations: Promise<any>[] = [
       cache.set(cacheKeys.byId(user.id), user, CACHE_TTL),
       cache.set(cacheKeys.byUsername(user.username), user, CACHE_TTL),
       cache.set(cacheKeys.byEmail(user.email), user, CACHE_TTL),
-      cache.set(cacheKeys.byRegisterNumber(await this.getRegisterNumber(user.employeeId)), user, CACHE_TTL)                
-    ]);
+    ];
+
+    if (registerNumber) {
+      operations.push(
+        cache.set(cacheKeys.byRegisterNumber(registerNumber), user, CACHE_TTL),
+      );
+    }
+
+    await Promise.all(operations);
   }
 
   private async invalidateUserCache(user: User): Promise<void> {
-    await Promise.all([
+    const registerNumber = await this.getRegisterNumber(user.employeeId);
+
+    const operations: Promise<any>[] = [
       cache.delete(cacheKeys.byId(user.id)),
       cache.delete(cacheKeys.byUsername(user.username)),
       cache.delete(cacheKeys.byEmail(user.email)),
-      cache.delete(cacheKeys.byRegisterNumber(await this.getRegisterNumber(user.employeeId))),
-    ]);
+    ];
+
+    if (registerNumber) {
+      operations.push(cache.delete(cacheKeys.byRegisterNumber(registerNumber)));
+    }
+
+    await Promise.all(operations);
   }
 
   async create(dto: CreateUserDTO): Promise<User> {
     const result = await pool.query<User>(
       `
       INSERT INTO teste.users
-        (employee_id, username, email, status)
-      VALUES ($1, $2, $3, COALESCE($4, 1))
+      (
+        employee_id,
+        username,
+        email,
+        status
+      )
+      VALUES
+      (
+        $1,
+        $2,
+        $3,
+        COALESCE($4, 1)
+      )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.employeeId, dto.username, dto.email, dto.status ?? null]
+      [dto.employeeId, dto.username, dto.email, dto.status ?? null],
     );
 
     const user = result.rows[0];
 
-    await Promise.all([
-      this.cacheUser(user),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
-    ]);
+    await Promise.all([this.cacheUser(user), this.invalidateListCache()]);
 
     return user;
   }
 
   async findById(id: string): Promise<User | null> {
-    const key = cacheKeys.byId(id);
+    const cacheKey = cacheKeys.byId(id);
 
-    const cached = await cache.get<User>(key);
+    const cached = await cache.get<User>(cacheKey);
+
     if (cached) {
-      console.log("Cache HIT user id:", id);
+      console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
     const result = await pool.query<User>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.users WHERE id = $1`,
-      [id]
+      `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.users
+      WHERE id = $1
+      `,
+      [id],
     );
 
     const user = result.rows[0];
+
     if (!user) {
       return null;
     }
 
-    await cache.set(key, user, CACHE_TTL);
+    await this.cacheUser(user);
+
     return user;
   }
 
   async findByUsername(username: string): Promise<User | null> {
-    const key = cacheKeys.byUsername(username);
+    const cacheKey = cacheKeys.byUsername(username);
 
-    const cached = await cache.get<User>(key);
+    const cached = await cache.get<User>(cacheKey);
+
     if (cached) {
-      console.log("Cache HIT user username:", username);
+      console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
     const result = await pool.query<User>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.users WHERE username = $1`,
-      [username]
+      `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.users
+      WHERE username = $1
+      `,
+      [username],
     );
 
     const user = result.rows[0];
+
     if (!user) {
       return null;
     }
 
-    await cache.set(key, user, CACHE_TTL);
+    await this.cacheUser(user);
+
     return user;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const key = cacheKeys.byEmail(email);
+    const cacheKey = cacheKeys.byEmail(email);
 
-    const cached = await cache.get<User>(key);
+    const cached = await cache.get<User>(cacheKey);
+
     if (cached) {
-      console.log("Cache HIT user email:", email);
+      console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
     const result = await pool.query<User>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.users WHERE email = $1`,
-      [email]
+      `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.users
+      WHERE email = $1
+      `,
+      [email],
     );
 
     const user = result.rows[0];
+
     if (!user) {
       return null;
     }
 
-    await cache.set(key, user, CACHE_TTL);
+    await this.cacheUser(user);
+
     return user;
   }
 
-  async findByRegisterNumber(registerNumber: number | string): Promise<User | null> {
-    const key = cacheKeys.byRegisterNumber(registerNumber);
+  async findByRegisterNumber(
+    registerNumber: string | number,
+  ): Promise<User | null> {
+    const cacheKey = cacheKeys.byRegisterNumber(registerNumber);
 
-    const cached = await cache.get<User>(key);
+    const cached = await cache.get<User>(cacheKey);
+
     if (cached) {
-      console.log("Cache HIT user register_number:", registerNumber);
+      console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
@@ -168,49 +226,64 @@ export class UserRepository {
         u.data_criacao   as "dataCriacao",
         u.data_alteracao as "dataAlteracao"
       FROM teste.users u
-      JOIN teste.employees e ON e.id = u.employee_id
+      INNER JOIN teste.employees e
+        ON e.id = u.employee_id
       WHERE e.register_number = $1
-      ORDER BY u.id ASC
       LIMIT 1
       `,
-      [registerNumber]
+      [registerNumber],
     );
 
     const user = result.rows[0];
+
     if (!user) {
       return null;
     }
 
-    await cache.set(key, user, CACHE_TTL);
+    await this.cacheUser(user);
+
     return user;
   }
 
-  async findAll(
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResult<User>> {
-    const cacheKey = cacheKeys.paginated(page, limit);
+  async findAll(page?: number, limit?: number): Promise<PaginatedResult<User>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
+
+    const cacheKey = isPaginated
+      ? cacheKeys.paginated(page, limit)
+      : cacheKeys.all();
 
     const cached = await cache.get<PaginatedResult<User>>(cacheKey);
+
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
-    const offset = (page - 1) * limit;
+    let query = `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.users
+      ORDER BY data_criacao DESC
+    `;
+
+    const params: any[] = [];
+
+    if (isPaginated) {
+      query += `
+        LIMIT $1
+        OFFSET $2
+      `;
+
+      params.push(limit, (page - 1) * limit);
+    }
 
     const [rowsResult, countResult] = await Promise.all([
-      pool.query<User>(
-        `
-        SELECT ${SELECT_COLUMNS}
-        FROM teste.users
-        ORDER BY data_criacao DESC
-        LIMIT $1 OFFSET $2
-        `,
-        [limit, offset]
-      ),
+      pool.query<User>(query, params),
       pool.query<{ total: string }>(
-        `SELECT COUNT(*) as total FROM teste.users`
+        `
+        SELECT COUNT(*) AS total
+        FROM teste.users
+        `,
       ),
     ]);
 
@@ -219,12 +292,13 @@ export class UserRepository {
     const response: PaginatedResult<User> = {
       data: rowsResult.rows,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: isPaginated ? page : null,
+      limit: isPaginated ? limit : null,
+      totalPages: isPaginated ? Math.ceil(total / limit) : null,
     };
 
     await cache.set(cacheKey, response, CACHE_TTL);
+
     return response;
   }
 
@@ -243,10 +317,17 @@ export class UserRepository {
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
       `,
-      [id, dto.employeeId ?? null, dto.username ?? null, dto.email ?? null, dto.status ?? null]
+      [
+        id,
+        dto.employeeId ?? null,
+        dto.username ?? null,
+        dto.email ?? null,
+        dto.status ?? null,
+      ],
     );
 
-    const updated = result.rows[0] ?? null;
+    const updated = result.rows[0];
+
     if (!updated) {
       return null;
     }
@@ -254,19 +335,31 @@ export class UserRepository {
     if (current) {
       await this.invalidateUserCache(current);
     }
-    await this.cacheUser(updated);
+
+    await Promise.all([this.cacheUser(updated), this.invalidateListCache()]);
 
     return updated;
   }
 
   async delete(id: string): Promise<User | null> {
     const user = await this.findById(id);
+
     if (!user) {
       return null;
     }
 
-    await pool.query(`DELETE FROM teste.users WHERE id = $1`, [id]);
-    await this.invalidateUserCache(user);
+    await pool.query(
+      `
+      DELETE FROM teste.users
+      WHERE id = $1
+      `,
+      [id],
+    );
+
+    await Promise.all([
+      this.invalidateUserCache(user),
+      this.invalidateListCache(),
+    ]);
 
     return user;
   }

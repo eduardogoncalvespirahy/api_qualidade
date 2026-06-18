@@ -1,20 +1,21 @@
 import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
-import {
-  Form,
-  CreateFormDTO,
-  UpdateFormDTO
-} from "../models/form.model";
+import { Form, CreateFormDTO, UpdateFormDTO } from "../models/form.model";
 import { RedisRepository } from "./redis.repository";
 
 const cache = new RedisRepository();
 
-const CACHE_TTL = (60 * 60) * 24; // 24 horas
+const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 const cacheKeys = {
   byId: (id: string) => `forms:${id}`,
-  paginated: (page: number, limit: number) => `forms:page:${page}:limit:${limit}`,
-  paginatedPattern: () => "forms:page:*",
+
+  all: () => "forms:all",
+
+  paginated: (page: number, limit: number) =>
+    `forms:page:${page}:limit:${limit}`,
+
+  listPattern: () => "forms:*",
 };
 
 const SELECT_COLUMNS = `
@@ -28,76 +29,111 @@ const SELECT_COLUMNS = `
 `;
 
 export class FormRepository {
+  private async invalidateListCache(): Promise<void> {
+    await cache.deleteByPattern(cacheKeys.listPattern());
+  }
+
   async create(dto: CreateFormDTO): Promise<Form> {
     const result = await pool.query<Form>(
       `
       INSERT INTO teste.forms
-        (section_id, nome, descricao, status)
-      VALUES ($1, $2, $3, COALESCE($4, 1))
+      (
+        section_id,
+        nome,
+        descricao,
+        status
+      )
+      VALUES
+      (
+        $1,
+        $2,
+        $3,
+        COALESCE($4, 1)
+      )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.sectionId, dto.nome, dto.descricao ?? null, dto.status ?? null]
+      [dto.sectionId, dto.nome, dto.descricao ?? null, dto.status ?? null],
     );
 
-    const row = result.rows[0];
+    const form = result.rows[0];
 
     await Promise.all([
-      cache.set(cacheKeys.byId(row.id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(form.id), form, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return form;
   }
 
   async findById(id: string): Promise<Form | null> {
-    const key = cacheKeys.byId(id);
+    const cacheKey = cacheKeys.byId(id);
 
-    const cached = await cache.get<Form>(key);
-    if (cached) {
-      console.log("Cache HIT forms:", id);
-      return cached;
-    }
+    const cached = await cache.get<Form>(cacheKey);
 
-    const result = await pool.query<Form>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.forms WHERE id = $1`,
-      [id]
-    );
-
-    const row = result.rows[0];
-    if (!row) {
-      return null;
-    }
-
-    await cache.set(key, row, CACHE_TTL);
-    return row;
-  }
-
-  async findAll(
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResult<Form>> {
-    const cacheKey = cacheKeys.paginated(page, limit);
-
-    const cached = await cache.get<PaginatedResult<Form>>(cacheKey);
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
-    const offset = (page - 1) * limit;
+    const result = await pool.query<Form>(
+      `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.forms
+      WHERE id = $1
+      `,
+      [id],
+    );
+
+    const form = result.rows[0];
+
+    if (!form) {
+      return null;
+    }
+
+    await cache.set(cacheKey, form, CACHE_TTL);
+
+    return form;
+  }
+
+  async findAll(page?: number, limit?: number): Promise<PaginatedResult<Form>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
+
+    const cacheKey = isPaginated
+      ? cacheKeys.paginated(page, limit)
+      : cacheKeys.all();
+
+    const cached = await cache.get<PaginatedResult<Form>>(cacheKey);
+
+    if (cached) {
+      console.log("Cache HIT:", cacheKey);
+      return cached;
+    }
+
+    let query = `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.forms
+      ORDER BY data_criacao DESC
+    `;
+
+    const params: unknown[] = [];
+
+    if (isPaginated) {
+      query += `
+        LIMIT $1
+        OFFSET $2
+      `;
+
+      params.push(limit, (page - 1) * limit);
+    }
 
     const [rowsResult, countResult] = await Promise.all([
-      pool.query<Form>(
-        `
-        SELECT ${SELECT_COLUMNS}
-        FROM teste.forms
-        ORDER BY data_criacao DESC
-        LIMIT $1 OFFSET $2
-        `,
-        [limit, offset]
-      ),
+      pool.query<Form>(query, params),
       pool.query<{ total: string }>(
-        `SELECT COUNT(*) as total FROM teste.forms`
+        `
+        SELECT COUNT(*) AS total
+        FROM teste.forms
+        `,
       ),
     ]);
 
@@ -106,12 +142,13 @@ export class FormRepository {
     const response: PaginatedResult<Form> = {
       data: rowsResult.rows,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: isPaginated ? page : null,
+      limit: isPaginated ? limit : null,
+      totalPages: isPaginated ? Math.ceil(total / limit) : null,
     };
 
     await cache.set(cacheKey, response, CACHE_TTL);
+
     return response;
   }
 
@@ -128,35 +165,49 @@ export class FormRepository {
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
       `,
-      [id, dto.sectionId ?? null, dto.nome ?? null, dto.descricao ?? null, dto.status ?? null]
+      [
+        id,
+        dto.sectionId ?? null,
+        dto.nome ?? null,
+        dto.descricao ?? null,
+        dto.status ?? null,
+      ],
     );
 
-    const row = result.rows[0] ?? null;
-    if (!row) {
+    const form = result.rows[0];
+
+    if (!form) {
       return null;
     }
 
     await Promise.all([
-      cache.set(cacheKeys.byId(id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(id), form, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return form;
   }
 
   async delete(id: string): Promise<Form | null> {
-    const existing = await this.findById(id);
-    if (!existing) {
+    const form = await this.findById(id);
+
+    if (!form) {
       return null;
     }
 
-    await pool.query(`DELETE FROM teste.forms WHERE id = $1`, [id]);
+    await pool.query(
+      `
+      DELETE FROM teste.forms
+      WHERE id = $1
+      `,
+      [id],
+    );
 
     await Promise.all([
       cache.delete(cacheKeys.byId(id)),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      this.invalidateListCache(),
     ]);
 
-    return existing;
+    return form;
   }
 }

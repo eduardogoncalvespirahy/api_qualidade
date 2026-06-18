@@ -3,18 +3,23 @@ import { PaginatedResult } from "../models/paginate.model";
 import {
   CostCenter,
   CreateCostCenterDTO,
-  UpdateCostCenterDTO
+  UpdateCostCenterDTO,
 } from "../models/costCenter.model";
 import { RedisRepository } from "./redis.repository";
 
 const cache = new RedisRepository();
 
-const CACHE_TTL = (60 * 60) * 24; // 24 horas
+const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 const cacheKeys = {
   byId: (id: string) => `cost_centers:${id}`,
-  paginated: (page: number, limit: number) => `cost_centers:page:${page}:limit:${limit}`,
-  paginatedPattern: () => "cost_centers:page:*",
+
+  all: () => "cost_centers:all",
+
+  paginated: (page: number, limit: number) =>
+    `cost_centers:page:${page}:limit:${limit}`,
+
+  listPattern: () => "cost_centers:*",
 };
 
 const SELECT_COLUMNS = `
@@ -23,76 +28,113 @@ const SELECT_COLUMNS = `
 `;
 
 export class CostCenterRepository {
+  private async invalidateListCache(): Promise<void> {
+    await cache.deleteByPattern(cacheKeys.listPattern());
+  }
+
   async create(dto: CreateCostCenterDTO): Promise<CostCenter> {
     const result = await pool.query<CostCenter>(
       `
-      INSERT INTO teste.cost_centers (id, name)
-      VALUES ($1, $2)
-      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+      INSERT INTO teste.cost_centers
+      (
+        id,
+        name
+      )
+      VALUES
+      (
+        $1,
+        $2
+      )
+      ON CONFLICT (id)
+      DO UPDATE SET
+        name = EXCLUDED.name
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.id, dto.name ?? null]
+      [dto.id, dto.name ?? null],
     );
 
-    const row = result.rows[0];
+    const costCenter = result.rows[0];
 
     await Promise.all([
-      cache.set(cacheKeys.byId(row.id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(costCenter.id), costCenter, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return costCenter;
   }
 
   async findById(id: string): Promise<CostCenter | null> {
-    const key = cacheKeys.byId(id);
+    const cacheKey = cacheKeys.byId(id);
 
-    const cached = await cache.get<CostCenter>(key);
-    if (cached) {
-      console.log("Cache HIT cost_centers:", id);
-      return cached;
-    }
+    const cached = await cache.get<CostCenter>(cacheKey);
 
-    const result = await pool.query<CostCenter>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.cost_centers WHERE id = $1`,
-      [id]
-    );
-
-    const row = result.rows[0];
-    if (!row) {
-      return null;
-    }
-
-    await cache.set(key, row, CACHE_TTL);
-    return row;
-  }
-
-  async findAll(
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResult<CostCenter>> {
-    const cacheKey = cacheKeys.paginated(page, limit);
-
-    const cached = await cache.get<PaginatedResult<CostCenter>>(cacheKey);
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
-    const offset = (page - 1) * limit;
+    const result = await pool.query<CostCenter>(
+      `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.cost_centers
+      WHERE id = $1
+      `,
+      [id],
+    );
+
+    const costCenter = result.rows[0];
+
+    if (!costCenter) {
+      return null;
+    }
+
+    await cache.set(cacheKey, costCenter, CACHE_TTL);
+
+    return costCenter;
+  }
+
+  async findAll(
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<CostCenter>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
+
+    const cacheKey = isPaginated
+      ? cacheKeys.paginated(page, limit)
+      : cacheKeys.all();
+
+    const cached = await cache.get<PaginatedResult<CostCenter>>(cacheKey);
+
+    if (cached) {
+      console.log("Cache HIT:", cacheKey);
+      return cached;
+    }
+
+    let query = `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.cost_centers
+      ORDER BY id ASC
+    `;
+
+    const params: unknown[] = [];
+
+    if (isPaginated) {
+      query += `
+        LIMIT $1
+        OFFSET $2
+      `;
+
+      params.push(limit, (page - 1) * limit);
+    }
 
     const [rowsResult, countResult] = await Promise.all([
-      pool.query<CostCenter>(
-        `
-        SELECT ${SELECT_COLUMNS}
-        FROM teste.cost_centers
-        ORDER BY id ASC
-        LIMIT $1 OFFSET $2
-        `,
-        [limit, offset]
-      ),
+      pool.query<CostCenter>(query, params),
       pool.query<{ total: string }>(
-        `SELECT COUNT(*) as total FROM teste.cost_centers`
+        `
+        SELECT COUNT(*) AS total
+        FROM teste.cost_centers
+        `,
       ),
     ]);
 
@@ -101,52 +143,65 @@ export class CostCenterRepository {
     const response: PaginatedResult<CostCenter> = {
       data: rowsResult.rows,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: isPaginated ? page : null,
+      limit: isPaginated ? limit : null,
+      totalPages: isPaginated ? Math.ceil(total / limit) : null,
     };
 
     await cache.set(cacheKey, response, CACHE_TTL);
+
     return response;
   }
 
-  async update(id: string, dto: UpdateCostCenterDTO): Promise<CostCenter | null> {
+  async update(
+    id: string,
+    dto: UpdateCostCenterDTO,
+  ): Promise<CostCenter | null> {
     const result = await pool.query<CostCenter>(
       `
       UPDATE teste.cost_centers
-      SET name = COALESCE($2, name)
+      SET
+        name = COALESCE($2, name)
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
       `,
-      [id, dto.name ?? null]
+      [id, dto.name ?? null],
     );
 
-    const row = result.rows[0] ?? null;
-    if (!row) {
+    const costCenter = result.rows[0];
+
+    if (!costCenter) {
       return null;
     }
 
     await Promise.all([
-      cache.set(cacheKeys.byId(id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(id), costCenter, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return costCenter;
   }
 
   async delete(id: string): Promise<CostCenter | null> {
-    const existing = await this.findById(id);
-    if (!existing) {
+    const costCenter = await this.findById(id);
+
+    if (!costCenter) {
       return null;
     }
 
-    await pool.query(`DELETE FROM teste.cost_centers WHERE id = $1`, [id]);
+    await pool.query(
+      `
+      DELETE FROM teste.cost_centers
+      WHERE id = $1
+      `,
+      [id],
+    );
 
     await Promise.all([
       cache.delete(cacheKeys.byId(id)),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      this.invalidateListCache(),
     ]);
 
-    return existing;
+    return costCenter;
   }
 }

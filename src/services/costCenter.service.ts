@@ -21,8 +21,8 @@ export class CostCenterService {
   }
 
   async findAll(
-    page: number = 1,
-    limit: number = 10
+    page?: number,
+    limit?: number
   ): Promise<PaginatedResult<CostCenter>> {
     return this.repository.findAll(page, limit);
   }

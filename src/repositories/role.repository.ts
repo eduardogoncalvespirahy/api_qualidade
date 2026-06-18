@@ -1,20 +1,21 @@
 import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
-import {
-  Role,
-  CreateRoleDTO,
-  UpdateRoleDTO
-} from "../models/role.model";
+import { Role, CreateRoleDTO, UpdateRoleDTO } from "../models/role.model";
 import { RedisRepository } from "./redis.repository";
 
 const cache = new RedisRepository();
 
-const CACHE_TTL = (60 * 60) * 24; // 24 horas
+const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 const cacheKeys = {
   byId: (id: string) => `roles:${id}`,
-  paginated: (page: number, limit: number) => `roles:page:${page}:limit:${limit}`,
-  paginatedPattern: () => "roles:page:*",
+
+  all: () => "roles:all",
+
+  paginated: (page: number, limit: number) =>
+    `roles:page:${page}:limit:${limit}`,
+
+  listPattern: () => "roles:*",
 };
 
 const SELECT_COLUMNS = `
@@ -28,76 +29,111 @@ const SELECT_COLUMNS = `
 `;
 
 export class RoleRepository {
+  private async invalidateListCache(): Promise<void> {
+    await cache.deleteByPattern(cacheKeys.listPattern());
+  }
+
   async create(dto: CreateRoleDTO): Promise<Role> {
     const result = await pool.query<Role>(
       `
       INSERT INTO teste.roles
-        (system_id, nome, descricao, status)
-      VALUES ($1, $2, $3, COALESCE($4, 1))
+      (
+        system_id,
+        nome,
+        descricao,
+        status
+      )
+      VALUES
+      (
+        $1,
+        $2,
+        $3,
+        COALESCE($4, 1)
+      )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.systemId, dto.nome, dto.descricao ?? null, dto.status ?? null]
+      [dto.systemId, dto.nome, dto.descricao ?? null, dto.status ?? null],
     );
 
-    const row = result.rows[0];
+    const role = result.rows[0];
 
     await Promise.all([
-      cache.set(cacheKeys.byId(row.id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(role.id), role, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return role;
   }
 
   async findById(id: string): Promise<Role | null> {
-    const key = cacheKeys.byId(id);
+    const cacheKey = cacheKeys.byId(id);
 
-    const cached = await cache.get<Role>(key);
-    if (cached) {
-      console.log("Cache HIT roles:", id);
-      return cached;
-    }
+    const cached = await cache.get<Role>(cacheKey);
 
-    const result = await pool.query<Role>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.roles WHERE id = $1`,
-      [id]
-    );
-
-    const row = result.rows[0];
-    if (!row) {
-      return null;
-    }
-
-    await cache.set(key, row, CACHE_TTL);
-    return row;
-  }
-
-  async findAll(
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResult<Role>> {
-    const cacheKey = cacheKeys.paginated(page, limit);
-
-    const cached = await cache.get<PaginatedResult<Role>>(cacheKey);
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
-    const offset = (page - 1) * limit;
+    const result = await pool.query<Role>(
+      `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.roles
+      WHERE id = $1
+      `,
+      [id],
+    );
+
+    const role = result.rows[0];
+
+    if (!role) {
+      return null;
+    }
+
+    await cache.set(cacheKey, role, CACHE_TTL);
+
+    return role;
+  }
+
+  async findAll(page?: number, limit?: number): Promise<PaginatedResult<Role>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
+
+    const cacheKey = isPaginated
+      ? cacheKeys.paginated(page, limit)
+      : cacheKeys.all();
+
+    const cached = await cache.get<PaginatedResult<Role>>(cacheKey);
+
+    if (cached) {
+      console.log("Cache HIT:", cacheKey);
+      return cached;
+    }
+
+    let query = `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.roles
+      ORDER BY data_criacao DESC
+    `;
+
+    const params: unknown[] = [];
+
+    if (isPaginated) {
+      query += `
+        LIMIT $1
+        OFFSET $2
+      `;
+
+      params.push(limit, (page - 1) * limit);
+    }
 
     const [rowsResult, countResult] = await Promise.all([
-      pool.query<Role>(
-        `
-        SELECT ${SELECT_COLUMNS}
-        FROM teste.roles
-        ORDER BY data_criacao DESC
-        LIMIT $1 OFFSET $2
-        `,
-        [limit, offset]
-      ),
+      pool.query<Role>(query, params),
       pool.query<{ total: string }>(
-        `SELECT COUNT(*) as total FROM teste.roles`
+        `
+        SELECT COUNT(*) AS total
+        FROM teste.roles
+        `,
       ),
     ]);
 
@@ -106,12 +142,13 @@ export class RoleRepository {
     const response: PaginatedResult<Role> = {
       data: rowsResult.rows,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: isPaginated ? page : null,
+      limit: isPaginated ? limit : null,
+      totalPages: isPaginated ? Math.ceil(total / limit) : null,
     };
 
     await cache.set(cacheKey, response, CACHE_TTL);
+
     return response;
   }
 
@@ -128,35 +165,49 @@ export class RoleRepository {
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
       `,
-      [id, dto.systemId ?? null, dto.nome ?? null, dto.descricao ?? null, dto.status ?? null]
+      [
+        id,
+        dto.systemId ?? null,
+        dto.nome ?? null,
+        dto.descricao ?? null,
+        dto.status ?? null,
+      ],
     );
 
-    const row = result.rows[0] ?? null;
-    if (!row) {
+    const role = result.rows[0];
+
+    if (!role) {
       return null;
     }
 
     await Promise.all([
-      cache.set(cacheKeys.byId(id), row, CACHE_TTL),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      cache.set(cacheKeys.byId(id), role, CACHE_TTL),
+      this.invalidateListCache(),
     ]);
 
-    return row;
+    return role;
   }
 
   async delete(id: string): Promise<Role | null> {
-    const existing = await this.findById(id);
-    if (!existing) {
+    const role = await this.findById(id);
+
+    if (!role) {
       return null;
     }
 
-    await pool.query(`DELETE FROM teste.roles WHERE id = $1`, [id]);
+    await pool.query(
+      `
+      DELETE FROM teste.roles
+      WHERE id = $1
+      `,
+      [id],
+    );
 
     await Promise.all([
       cache.delete(cacheKeys.byId(id)),
-      cache.deleteByPattern(cacheKeys.paginatedPattern()),
+      this.invalidateListCache(),
     ]);
 
-    return existing;
+    return role;
   }
 }
