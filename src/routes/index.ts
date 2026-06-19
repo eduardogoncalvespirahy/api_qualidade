@@ -12,6 +12,15 @@ import locationRoutes from "./location.routes";
 import answerRoutes from "./answer.routes";
 import machineRoutes from "./machine.routes";
 
+import answerResultRoutes from "./answerResult.routes";
+import breakFormRoutes from "./breakForm.routes";
+import breakMachineRoutes from "./breakMachine.routes";
+import categorieAnswerRoutes from "./categorieAnswer.routes";
+import controlRoutes from "./control.routes";
+import limitAnswerRoutes from "./limitAnswer.routes";
+import machineAnswerRoutes from "./machineAnswer.routes";
+import machineAnswerResultRoutes from "./machineAnswerResult.routes";
+
 // Autenticação / autorização
 import credentialRoutes from "./credential.routes";
 import credentialRoleRoutes from "./credentialRole.routes";
@@ -39,6 +48,15 @@ router.use("/forms", formRoutes);
 router.use("/locations", locationRoutes);
 router.use("/answers", answerRoutes);
 router.use("/machines", machineRoutes);
+
+router.use("/answer-result", answerResultRoutes);
+router.use("/break-forms", breakFormRoutes);
+router.use("/break-machines", breakMachineRoutes);
+router.use("/categories-answers", categorieAnswerRoutes);
+router.use("/controls", controlRoutes);
+router.use("/limits-answers", limitAnswerRoutes);
+router.use("/machine-answers", machineAnswerRoutes);
+router.use("/machine-answer-result", machineAnswerResultRoutes);
 
 router.use("/credentials", credentialRoutes);
 router.use("/credentials-roles", credentialRoleRoutes);
