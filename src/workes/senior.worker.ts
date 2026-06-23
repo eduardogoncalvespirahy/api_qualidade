@@ -3,37 +3,53 @@ import { SeniorSyncService } from "../services/seniorPG.service";
 
 export class SeniorSyncWorker {
   private readonly service = new SeniorSyncService();
+  private task?: ReturnType<typeof cron.schedule>;
+  private running = false;
 
   start() {
-    console.log(
-      "[SeniorSyncWorker] iniciado",
-    );
+    console.log("[SeniorSyncWorker] iniciado");
 
-    // executa na inicialização
-    this.execute();
+    // executa na inicialização (sem bloquear o boot)
+    void this.execute();
 
     // a cada 5 minutos
-    cron.schedule(
-      "*/5 * * * *",
-      () => this.execute(),
-    );
+    this.task = cron.schedule("*/5 * * * *", () => this.execute());
+
+    // node-cron v4: se o tick for "perdido" (event loop ocupado naquele
+    // instante), o agendamento pode ser pulado. Aqui reexecutamos assim
+    // que possível — a guarda `running` evita rodar duas vezes.
+    this.task.on("execution:missed", () => {
+      console.warn("[SeniorSyncWorker] tick perdido — reexecutando");
+      void this.execute();
+    });
   }
 
   private async execute() {
-    try {
-      console.log(
-        "[SeniorSyncWorker] sincronizando...",
+    // evita sobreposição: se a execução anterior ainda não terminou,
+    // ignora este disparo (não empilha sincronizações).
+    if (this.running) {
+      console.warn(
+        "[SeniorSyncWorker] execução anterior ainda em andamento — ignorando este disparo",
       );
+      return;
+    }
 
-      const result =
-        await this.service.execute();
+    this.running = true;
+    const startedAt = Date.now();
+
+    try {
+      console.log("[SeniorSyncWorker] sincronizando...");
+
+      const result = await this.service.execute();
 
       console.table(result);
-    } catch (error) {
-      console.error(
-        "[SeniorSyncWorker]",
-        error,
+      console.log(
+        `[SeniorSyncWorker] concluído em ${Date.now() - startedAt}ms`,
       );
+    } catch (error) {
+      console.error("[SeniorSyncWorker]", error);
+    } finally {
+      this.running = false;
     }
   }
 }

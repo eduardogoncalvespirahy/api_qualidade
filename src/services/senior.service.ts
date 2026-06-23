@@ -19,20 +19,11 @@ export class SeniorSyncService {
       .digest("hex");
   }
 
-  private chunk<T>(
-    array: T[],
-    size: number,
-  ): T[][] {
+  private chunk<T>(array: T[], size: number): T[][] {
     const chunks: T[][] = [];
 
-    for (
-      let i = 0;
-      i < array.length;
-      i += size
-    ) {
-      chunks.push(
-        array.slice(i, i + size),
-      );
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
     }
 
     return chunks;
@@ -41,115 +32,101 @@ export class SeniorSyncService {
   mapEmployee(rowData: any) {
     const row = rowData.row;
 
-    const obj = Object.fromEntries(
-        row.map((i: any) => [i.name, i.value])
-    );
+    const obj = Object.fromEntries(row.map((i: any) => [i.name, i.value]));
 
     return {
-        _id: obj.id,
+      _id: obj.id,
 
-        companyNumber: Number(obj.company_number),
+      companyNumber: Number(obj.company_number),
 
-        registerNumber: Number(obj.register_number),
+      registerNumber: Number(obj.register_number),
 
-        registrationNumber: Number(obj.registration_number),
+      registrationNumber: Number(obj.registration_number),
 
-        person: {
+      person: {
         id: obj.person_id,
-        name: obj.person_name
-        },
+        name: obj.person_name,
+      },
 
-        hireDate: obj.hire_date
-        ? new Date(
-            obj.hire_date.split("/").reverse().join("-")
-            )
+      hireDate: obj.hire_date
+        ? new Date(obj.hire_date.split("/").reverse().join("-"))
         : null,
 
-        dismissalDate: null,
+      dismissalDate: null,
 
-        employeeType: {
+      employeeType: {
         code: Number(obj.employee_type),
         enum: obj.employee_type_enum,
-        description: obj.employee_type_description
-        },
+        description: obj.employee_type_description,
+      },
 
-        employer: {
+      employer: {
         id: obj.employer_id,
-        tradingName: obj.employer_trading_name
-        },
+        tradingName: obj.employer_trading_name,
+      },
 
-        department: {
+      department: {
         id: obj.department_id,
-        name: obj.department_name
-        },
+        name: obj.department_name,
+      },
 
-        jobPosition: {
+      jobPosition: {
         id: obj.jobposition_id,
-        name: obj.jobposition_name
-        },
+        name: obj.jobposition_name,
+      },
 
-        workstationGroup: {
+      workstationGroup: {
         id: obj.workstation_group_id,
-        name: obj.workstation_group_name
-        },
+        name: obj.workstation_group_name,
+      },
 
-        workshift: {
+      workshift: {
         id: obj.workshift_id,
-        description: obj.workshift_description
-        },
+        description: obj.workshift_description,
+      },
 
-        costCenter: {
+      costCenter: {
         id: obj.costcenter_id,
-        name: obj.costcenter_name
-        },
+        name: obj.costcenter_name,
+      },
 
-        riskPremium: Number(obj.risk_premium),
+      riskPremium: Number(obj.risk_premium),
 
-        insalubrityPremium: Number(obj.insalubrity_premium),
+      insalubrityPremium: Number(obj.insalubrity_premium),
 
-        processNumber: obj.process_number,
+      processNumber: obj.process_number,
 
-        isOccupyQuotaDisability:
-        obj.is_occupy_quota_disability === "true",
+      isOccupyQuotaDisability: obj.is_occupy_quota_disability === "true",
 
-        hierarchyFilter: obj.hierarchy_filter,
+      hierarchyFilter: obj.hierarchy_filter,
 
-        ext: obj.ext
+      ext: obj.ext,
     };
   }
 
   async execute() {
-
-    const startedAt = new Date();    
+    const startedAt = new Date();
     try {
+      const response = await this.seniorRepository.getEmployees();
 
-      const response =
-        await this.seniorRepository.getEmployees();
-
-      const employees =
-        response.map((rowData: any) => this.mapEmployee(rowData));
-
-      const mongoEmployees =
-        await this.mongoRepository
-          .findManyProjection<
-            EmployeeDocument,
-            EmployeeHash
-          >(
-            DATABASE,
-            COLLECTION,
-            {},
-            {
-              _id: 1,
-              hash: 1,
-            },
-          );
-
-      const mongoMap = new Map(
-        mongoEmployees.map((item) => [
-          item._id,
-          item,
-        ]),
+      const employees = response.map((rowData: any) =>
+        this.mapEmployee(rowData),
       );
+
+      const mongoEmployees = await this.mongoRepository.findManyProjection<
+        EmployeeDocument,
+        EmployeeHash
+      >(
+        DATABASE,
+        COLLECTION,
+        {},
+        {
+          _id: 1,
+          hash: 1,
+        },
+      );
+
+      const mongoMap = new Map(mongoEmployees.map((item) => [item._id, item]));
 
       const apiIds = new Set<string>();
 
@@ -158,14 +135,19 @@ export class SeniorSyncService {
       let inserted = 0;
       let updated = 0;
 
+      let processed = 0;
       for (const employee of employees) {
+        // cede o event loop a cada 500 itens para não bloqueá-lo durante o
+        // hashing (evita o "missed execution" do node-cron).
+        if (++processed % 500 === 0) {
+          await new Promise((resolve) => setImmediate(resolve));
+        }
+
         apiIds.add(employee._id);
 
-        const hash =
-          this.createHash(employee);
+        const hash = this.createHash(employee);
 
-        const current =
-          mongoMap.get(employee._id);
+        const current = mongoMap.get(employee._id);
 
         if (!current) {
           inserted++;
@@ -203,16 +185,11 @@ export class SeniorSyncService {
         }
       }
 
-      const removedIds =
-        mongoEmployees
-          .filter(
-            (employee) =>
-              !apiIds.has(employee._id.toString()),
-          )
-          .map((employee) => employee._id.toString());
+      const removedIds = mongoEmployees
+        .filter((employee) => !apiIds.has(employee._id.toString()))
+        .map((employee) => employee._id.toString());
 
-      const removed =
-        removedIds.length;
+      const removed = removedIds.length;
 
       if (removedIds.length) {
         operations.push({
@@ -226,27 +203,18 @@ export class SeniorSyncService {
         });
       }
 
-      const BATCH_SIZE = Number(
-        process.env.MONGO_BULK_BATCH_SIZE ?? 1000,
-      );
+      const BATCH_SIZE = Number(process.env.MONGO_BULK_BATCH_SIZE ?? 1000);
 
-      const batches = this.chunk(
-        operations,
-        BATCH_SIZE,
-      );
+      const batches = this.chunk(operations, BATCH_SIZE);
 
       for (const batch of batches) {
-        await this.mongoRepository.bulkWrite(
-          DATABASE,
-          COLLECTION,
-          batch,
-        );
+        await this.mongoRepository.bulkWrite(DATABASE, COLLECTION, batch);
       }
 
       // em paralelo, mais rapido porem mais custoso para o banco, avaliar qual estrategia é melhor...
       // await Promise.all(
       //   this.chunk(
-      //     operations, 
+      //     operations,
       //     BATCH_SIZE
       //   ).map(
       //     (batch) =>
@@ -260,27 +228,20 @@ export class SeniorSyncService {
 
       const finishedAt = new Date();
 
-      await this.mongoRepository.insertOne(
-        DATABASE,
-        "sync_logs",
-        {
-          startedAt,
-          finishedAt,
-          durationMs:
-            finishedAt.getTime() -
-            startedAt.getTime(),
+      await this.mongoRepository.insertOne(DATABASE, "sync_logs", {
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
 
-          inserted,
-          updated,
-          removed,
+        inserted,
+        updated,
+        removed,
 
-          totalApi: employees.length,
-          totalMongoBefore:
-            mongoEmployees.length,
+        totalApi: employees.length,
+        totalMongoBefore: mongoEmployees.length,
 
-          success: true,
-        },
-      );
+        success: true,
+      });
 
       return {
         inserted,
@@ -288,38 +249,26 @@ export class SeniorSyncService {
         removed,
         totalApi: employees.length,
       };
-
     } catch (error) {
-
       const finishedAt = new Date();
 
-      await this.mongoRepository.insertOne(
-        DATABASE,
-        "sync_logs",
-        {
-          startedAt,
-          finishedAt,
-          durationMs:
-            finishedAt.getTime() -
-            startedAt.getTime(),
+      await this.mongoRepository.insertOne(DATABASE, "sync_logs", {
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
 
-          inserted: 0,
-          updated: 0,
-          removed: 0,
+        inserted: 0,
+        updated: 0,
+        removed: 0,
 
-          totalApi: 0,
-          totalMongoBefore: 0,
+        totalApi: 0,
+        totalMongoBefore: 0,
 
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : String(error),
-        },
-      );
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
 
       throw error;
-    
-    }      
+    }
   }
 }

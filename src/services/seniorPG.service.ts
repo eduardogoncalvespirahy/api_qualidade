@@ -5,368 +5,236 @@ import { SeniorRepository } from "../repositories/senior.repository";
 import { PostgresRepository } from "../repositories/postgres.repository";
 
 export class SeniorSyncService {
-    constructor(
-        private readonly postgresRepository =
-            new PostgresRepository(),
+  constructor(
+    private readonly postgresRepository = new PostgresRepository(),
 
-        private readonly seniorRepository =
-            new SeniorRepository(),
-    ) { }
+    private readonly seniorRepository = new SeniorRepository(),
+  ) {}
 
-    private createHash(data: unknown) {
-        return crypto
-            .createHash("sha256")
-            .update(JSON.stringify(data))
-            .digest("hex");
+  private createHash(data: unknown) {
+    return crypto
+      .createHash("sha256")
+      .update(JSON.stringify(data))
+      .digest("hex");
+  }
+
+  private chunk<T>(array: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
     }
 
-    private chunk<T>(
-        array: T[],
-        size: number,
-    ): T[][] {
-        const chunks: T[][] = [];
+    return chunks;
+  }
 
-        for (
-            let i = 0;
-            i < array.length;
-            i += size
-        ) {
-            chunks.push(
-                array.slice(i, i + size),
-            );
-        }
-
-        return chunks;
+  private toDate(value: unknown): Date | null {
+    if (!value) {
+      return null;
     }
 
-    private toDate(
-      value: unknown,
-    ): Date | null {
-      if (!value) {
-        return null;
-      }
+    try {
+      return new Date(String(value).split("/").reverse().join("-"));
+    } catch {
+      return null;
+    }
+  }
 
-      try {
-        return new Date(
-          String(value)
-            .split("/")
-            .reverse()
-            .join("-"),
-        );
-      } catch {
-        return null;
-      }
+  private toNumber(value: unknown): number | null {
+    if (value === undefined || value === null || value === "") {
+      return null;
     }
 
-    private toNumber(
-      value: unknown,
-    ): number | null {
-      if (
-        value === undefined ||
-        value === null ||
-        value === ""
-      ) {
-        return null;
-      }
+    const parsed = Number(value);
 
-      const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
 
-      return Number.isFinite(parsed)
-        ? parsed
-        : null;
-    }
+  mapEmployee(rowData: any) {
+    const row = rowData.row;
 
-    mapEmployee(rowData: any) {
-      const row = rowData.row;
+    const obj = Object.fromEntries(row.map((i: any) => [i.name, i.value]));
 
-      const obj = Object.fromEntries(
-        row.map((i: any) => [
-          i.name,
-          i.value,
-        ]),
+    return {
+      id: obj.id,
+
+      companyNumber: this.toNumber(obj.company_number),
+
+      registerNumber: this.toNumber(obj.register_number),
+
+      registrationNumber: this.toNumber(obj.registration_number),
+
+      person: {
+        id: obj.person_id,
+        name: obj.person_name,
+      },
+
+      hireDate: this.toDate(obj.hire_date),
+
+      dismissalDate: null,
+
+      employeeType: {
+        code: this.toNumber(obj.employee_type),
+
+        enum: obj.employee_type_enum,
+
+        description: obj.employee_type_description,
+      },
+
+      employer: {
+        id: obj.employer_id,
+        tradingName: obj.employer_trading_name,
+      },
+
+      department: {
+        id: obj.department_id,
+        name: obj.department_name,
+      },
+
+      jobPosition: {
+        id: obj.jobposition_id,
+
+        name: obj.jobposition_name,
+      },
+
+      workstationGroup: {
+        id: obj.workstation_group_id,
+
+        name: obj.workstation_group_name,
+      },
+
+      workshift: {
+        id: obj.workshift_id,
+
+        description: obj.workshift_description,
+      },
+
+      costCenter: {
+        id: obj.costcenter_id,
+
+        name: obj.costcenter_name,
+      },
+
+      riskPremium: this.toNumber(obj.risk_premium),
+
+      insalubrityPremium: this.toNumber(obj.insalubrity_premium),
+
+      processNumber: obj.process_number,
+
+      isOccupyQuotaDisability: obj.is_occupy_quota_disability === "true",
+
+      hierarchyFilter: obj.hierarchy_filter,
+
+      ext: obj.ext,
+    };
+  }
+
+  private createPlaceholders(rowCount: number, columnsPerRow: number): string {
+    return Array.from({ length: rowCount }, (_, rowIndex) => {
+      const start = rowIndex * columnsPerRow;
+
+      const placeholders = Array.from(
+        { length: columnsPerRow },
+        (_, columnIndex) => `$${start + columnIndex + 1}`,
       );
 
-      return {
-        id: obj.id,
+      return `(${placeholders.join(",")})`;
+    }).join(",");
+  }
 
-        companyNumber:
-          this.toNumber(
-            obj.company_number,
-          ),
+  async execute() {
+    const startedAt = new Date();
 
-        registerNumber:
-          this.toNumber(
-            obj.register_number,
-          ),
+    let inserted = 0;
+    let updated = 0;
 
-        registrationNumber:
-          this.toNumber(
-            obj.registration_number,
-          ),
+    try {
+      const response = await this.seniorRepository.getEmployees();
 
-        person: {
-          id: obj.person_id,
-          name: obj.person_name,
-        },
+      const employees = response.map((r: any) => this.mapEmployee(r));
 
-        hireDate:
-          this.toDate(
-            obj.hire_date,
-          ),
+      const dbEmployees = await this.postgresRepository.findEmployeeHashes();
 
-        dismissalDate: null,
+      const dbMap = new Map(
+        dbEmployees.map((employee) => [employee.id, employee]),
+      );
 
-        employeeType: {
-          code:
-            this.toNumber(
-              obj.employee_type,
-            ),
+      const apiIds = new Set<string>();
 
-          enum:
-            obj.employee_type_enum,
+      const employeesToUpsert: any[] = [];
 
-          description:
-            obj.employee_type_description,
-        },
+      let processed = 0;
+      for (const employee of employees) {
+        // cede o event loop a cada 500 itens para não bloqueá-lo durante o
+        // hashing (evita o "missed execution" do node-cron).
+        if (++processed % 500 === 0) {
+          await new Promise((resolve) => setImmediate(resolve));
+        }
 
-        employer: {
-          id: obj.employer_id,
-          tradingName:
-            obj.employer_trading_name,
-        },
+        apiIds.add(employee.id);
 
-        department: {
-          id: obj.department_id,
-          name:
-            obj.department_name,
-        },
+        const hash = this.createHash(employee);
 
-        jobPosition: {
-          id:
-            obj.jobposition_id,
+        const current = dbMap.get(employee.id);
 
-          name:
-            obj.jobposition_name,
-        },
+        if (!current) {
+          inserted++;
 
-        workstationGroup: {
-          id:
-            obj.workstation_group_id,
+          employeesToUpsert.push({
+            ...employee,
+            hash,
+          });
 
-          name:
-            obj.workstation_group_name,
-        },
+          continue;
+        }
 
-        workshift: {
-          id:
-            obj.workshift_id,
+        if (current.hash !== hash) {
+          updated++;
 
-          description:
-            obj.workshift_description,
-        },
+          employeesToUpsert.push({
+            ...employee,
+            hash,
+          });
+        }
+      }
 
-        costCenter: {
-          id:
-            obj.costcenter_id,
+      const removedIds = dbEmployees
+        .filter((employee) => !apiIds.has(employee.id))
+        .map((employee) => employee.id);
 
-          name:
-            obj.costcenter_name,
-        },
+      const removed = removedIds.length;
 
-        riskPremium:
-          this.toNumber(
-            obj.risk_premium,
-          ),
+      const client = await this.postgresRepository.getClient();
 
-        insalubrityPremium:
-          this.toNumber(
-            obj.insalubrity_premium,
-          ),
+      try {
+        await client.query("BEGIN");
 
-        processNumber:
-          obj.process_number,
+        await this.upsertEmployers(client, employeesToUpsert);
 
-        isOccupyQuotaDisability:
-          obj.is_occupy_quota_disability ===
-          "true",
+        await this.upsertDepartments(client, employeesToUpsert);
 
-        hierarchyFilter:
-          obj.hierarchy_filter,
+        await this.upsertJobPositions(client, employeesToUpsert);
 
-        ext: obj.ext,
-      };
-    }
+        await this.upsertCostCenters(client, employeesToUpsert);
 
-    private createPlaceholders(
-      rowCount: number,
-      columnsPerRow: number,
-    ): string {
-      return Array
-        .from(
-        { length: rowCount },
-        (_, rowIndex) => {
-            const start =
-            rowIndex * columnsPerRow;
+        await this.upsertWorkshifts(client, employeesToUpsert);
 
-            const placeholders =
-            Array.from(
-                { length: columnsPerRow },
-                (_, columnIndex) =>
-                `$${start + columnIndex + 1}`,
-            );
+        await this.upsertWorkstationGroups(client, employeesToUpsert);
 
-            return `(${placeholders.join(",")})`;
-        },
-        )
-        .join(",");
-    }
+        await this.upsertEmployees(client, employeesToUpsert);
 
-    async execute() {
-        const startedAt =
-            new Date();
-
-        let inserted = 0;
-        let updated = 0;
-
-        try {
-            const response =
-                await this
-                    .seniorRepository
-                    .getEmployees();
-
-            const employees =
-                response.map((r: any) =>
-                    this.mapEmployee(r),
-                );
-
-            const dbEmployees =
-                await this
-                    .postgresRepository
-                    .findEmployeeHashes();
-
-            const dbMap =
-                new Map(
-                    dbEmployees.map(
-                        (employee) => [
-                            employee.id,
-                            employee,
-                        ],
-                    ),
-                );
-
-            const apiIds =
-                new Set<string>();
-
-            const employeesToUpsert:
-                any[] = [];
-
-            for (const employee of employees) {
-                apiIds.add(employee.id);
-
-                const hash =
-                    this.createHash(employee);
-
-                const current =
-                    dbMap.get(employee.id);
-
-                if (!current) {
-                    inserted++;
-
-                    employeesToUpsert.push({
-                        ...employee,
-                        hash,
-                    });
-
-                    continue;
-                }
-
-                if (
-                    current.hash !== hash
-                ) {
-                    updated++;
-
-                    employeesToUpsert.push({
-                        ...employee,
-                        hash,
-                    });
-                }
-            }
-
-            const removedIds =
-                dbEmployees
-                    .filter(
-                        (employee) =>
-                            !apiIds.has(
-                                employee.id,
-                            ),
-                    )
-                    .map(
-                        (employee) =>
-                            employee.id,
-                    );
-
-            const removed =
-                removedIds.length;
-
-            const client =
-                await this
-                    .postgresRepository
-                    .getClient();
-
-            try {
-                await client.query(
-                    "BEGIN",
-                );
-
-                await this.upsertEmployers(
-                    client,
-                    employeesToUpsert,
-                );
-
-                await this.upsertDepartments(
-                    client,
-                    employeesToUpsert,
-                );
-
-                await this.upsertJobPositions(
-                    client,
-                    employeesToUpsert,
-                );
-
-                await this.upsertCostCenters(
-                    client,
-                    employeesToUpsert,
-                );
-
-                await this.upsertWorkshifts(
-                    client,
-                    employeesToUpsert,
-                );
-
-                await this.upsertWorkstationGroups(
-                    client,
-                    employeesToUpsert,
-                );
-
-                await this.upsertEmployees(
-                    client,
-                    employeesToUpsert,
-                );
-
-                if (
-                    removedIds.length
-                ) {
-                    await client.query(
-                        `
+        if (removedIds.length) {
+          await client.query(
+            `
                           DELETE FROM teste.employees
                           WHERE id = ANY($1)
                         `,
-                        [removedIds],
-                    );
-                }
+            [removedIds],
+          );
+        }
 
-                await client.query(
-                    `
+        await client.query(
+          `
                       INSERT INTO teste.sync_logs (
                         started_at,
                         finished_at,
@@ -384,85 +252,62 @@ export class SeniorSyncService {
                         $7,$8,$9
                       )
                     `,
-                    [
-                        startedAt,
-                        new Date(),
-                        Date.now() -
-                        startedAt.getTime(),
-                        inserted,
-                        updated,
-                        removed,
-                        employees.length,
-                        dbEmployees.length,
-                        true,
-                    ],
-                );
-
-                await client.query(
-                    "COMMIT",
-                );
-            } catch (error) {
-                await client.query(
-                    "ROLLBACK",
-                );
-
-                throw error;
-            } finally {
-                client.release();
-            }
-
-            return {
-                inserted,
-                updated,
-                removed,
-            };
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    private async upsertEmployers(
-        client: PoolClient,
-        employees: any[],
-    ) {
-        const unique = new Map();
-
-        for (const employee of employees) {
-            unique.set(
-                employee.employer.id,
-                employee.employer,
-            );
-        }
-
-        const employers = [
-            ...unique.values(),
-        ];
-
-        const BATCH_SIZE = Number(
-          process.env.MONGO_BULK_BATCH_SIZE ?? 500,
+          [
+            startedAt,
+            new Date(),
+            Date.now() - startedAt.getTime(),
+            inserted,
+            updated,
+            removed,
+            employees.length,
+            dbEmployees.length,
+            true,
+          ],
         );
 
-        const batches =
-            this.chunk(employers, BATCH_SIZE);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
 
-        for (const batch of batches) {
-            const params: any[] = [];
+        throw error;
+      } finally {
+        client.release();
+      }
 
-            batch.forEach((item) => {
-                params.push(
-                    item.id,
-                    item.tradingName,
-                );
-            });
+      return {
+        inserted,
+        updated,
+        removed,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
 
-            const placeholders =
-                this.createPlaceholders(
-                    batch.length,
-                    2,
-                );
+  private async upsertEmployers(client: PoolClient, employees: any[]) {
+    const unique = new Map();
 
-            await client.query(
-                `
+    for (const employee of employees) {
+      unique.set(employee.employer.id, employee.employer);
+    }
+
+    const employers = [...unique.values()];
+
+    const BATCH_SIZE = Number(process.env.PG_BULK_BATCH_SIZE ?? 500);
+
+    const batches = this.chunk(employers, BATCH_SIZE);
+
+    for (const batch of batches) {
+      const params: any[] = [];
+
+      batch.forEach((item) => {
+        params.push(item.id, item.tradingName);
+      });
+
+      const placeholders = this.createPlaceholders(batch.length, 2);
+
+      await client.query(
+        `
       INSERT INTO teste.employers (
         id,
         trading_name
@@ -476,56 +321,35 @@ export class SeniorSyncService {
       trading_name =
         EXCLUDED.trading_name
       `,
-                params,
-            );
-        }
+        params,
+      );
+    }
+  }
+
+  private async upsertDepartments(client: PoolClient, employees: any[]) {
+    const unique = new Map();
+
+    for (const employee of employees) {
+      unique.set(employee.department.id, employee.department);
     }
 
-    private async upsertDepartments(
-        client: PoolClient,
-        employees: any[],
-    ) {
-        const unique = new Map();
+    const departments = [...unique.values()];
 
-        for (const employee of employees) {
-            unique.set(
-                employee.department.id,
-                employee.department,
-            );
-        }
+    const BATCH_SIZE = Number(process.env.PG_BULK_BATCH_SIZE ?? 500);
 
-        const departments = [
-            ...unique.values(),
-        ];
+    const batches = this.chunk(departments, BATCH_SIZE);
 
-        const BATCH_SIZE = Number(
-          process.env.MONGO_BULK_BATCH_SIZE ?? 500,
-        );
+    for (const batch of batches) {
+      const params: any[] = [];
 
-        const batches =
-            this.chunk(
-                departments,
-                BATCH_SIZE,
-            );
+      batch.forEach((item) => {
+        params.push(item.id, item.name);
+      });
 
-        for (const batch of batches) {
-            const params: any[] = [];
+      const placeholders = this.createPlaceholders(batch.length, 2);
 
-            batch.forEach((item) => {
-                params.push(
-                    item.id,
-                    item.name,
-                );
-            });
-
-            const placeholders =
-                this.createPlaceholders(
-                    batch.length,
-                    2,
-                );
-
-            await client.query(
-                `
+      await client.query(
+        `
       INSERT INTO teste.departments (
         id,
         name
@@ -539,56 +363,35 @@ export class SeniorSyncService {
       name =
         EXCLUDED.name
       `,
-                params,
-            );
-        }
+        params,
+      );
+    }
+  }
+
+  private async upsertJobPositions(client: PoolClient, employees: any[]) {
+    const unique = new Map();
+
+    for (const employee of employees) {
+      unique.set(employee.jobPosition.id, employee.jobPosition);
     }
 
-    private async upsertJobPositions(
-        client: PoolClient,
-        employees: any[],
-    ) {
-        const unique = new Map();
+    const jobpositions = [...unique.values()];
 
-        for (const employee of employees) {
-            unique.set(
-                employee.jobPosition.id,
-                employee.jobPosition,
-            );
-        }
+    const BATCH_SIZE = Number(process.env.PG_BULK_BATCH_SIZE ?? 500);
 
-        const jobpositions = [
-            ...unique.values(),
-        ];
+    const batches = this.chunk(jobpositions, BATCH_SIZE);
 
-        const BATCH_SIZE = Number(
-          process.env.MONGO_BULK_BATCH_SIZE ?? 500,
-        );
+    for (const batch of batches) {
+      const params: any[] = [];
 
-        const batches =
-            this.chunk(
-                jobpositions,
-                BATCH_SIZE,
-            );
+      batch.forEach((item) => {
+        params.push(item.id, item.name);
+      });
 
-        for (const batch of batches) {
-            const params: any[] = [];
+      const placeholders = this.createPlaceholders(batch.length, 2);
 
-            batch.forEach((item) => {
-                params.push(
-                    item.id,
-                    item.name,
-                );
-            });
-
-            const placeholders =
-                this.createPlaceholders(
-                    batch.length,
-                    2,
-                );
-
-            await client.query(
-                `
+      await client.query(
+        `
                 INSERT INTO teste.job_positions (
                   id,
                   name
@@ -602,56 +405,35 @@ export class SeniorSyncService {
                 name =
                   EXCLUDED.name
                 `,
-                params,
-            );
-        }
+        params,
+      );
+    }
+  }
+
+  private async upsertCostCenters(client: PoolClient, employees: any[]) {
+    const unique = new Map();
+
+    for (const employee of employees) {
+      unique.set(employee.costCenter.id, employee.costCenter);
     }
 
-    private async upsertCostCenters(
-        client: PoolClient,
-        employees: any[],
-    ) {
-        const unique = new Map();
+    const costCenters = [...unique.values()];
 
-        for (const employee of employees) {
-            unique.set(
-                employee.costCenter.id,
-                employee.costCenter,
-            );
-        }
+    const BATCH_SIZE = Number(process.env.PG_BULK_BATCH_SIZE ?? 500);
 
-        const costCenters = [
-            ...unique.values(),
-        ];
+    const batches = this.chunk(costCenters, BATCH_SIZE);
 
-        const BATCH_SIZE = Number(
-          process.env.MONGO_BULK_BATCH_SIZE ?? 500,
-        );
+    for (const batch of batches) {
+      const params: any[] = [];
 
-        const batches =
-            this.chunk(
-                costCenters,
-                BATCH_SIZE,
-            );
+      batch.forEach((item) => {
+        params.push(item.id, item.name);
+      });
 
-        for (const batch of batches) {
-            const params: any[] = [];
+      const placeholders = this.createPlaceholders(batch.length, 2);
 
-            batch.forEach((item) => {
-                params.push(
-                    item.id,
-                    item.name,
-                );
-            });
-
-            const placeholders =
-                this.createPlaceholders(
-                    batch.length,
-                    2,
-                );
-
-            await client.query(
-                `
+      await client.query(
+        `
                 INSERT INTO teste.cost_centers (
                   id,
                   name
@@ -665,56 +447,35 @@ export class SeniorSyncService {
                 name =
                   EXCLUDED.name
                 `,
-                params,
-            );
-        }
+        params,
+      );
+    }
+  }
+
+  private async upsertWorkshifts(client: PoolClient, employees: any[]) {
+    const unique = new Map();
+
+    for (const employee of employees) {
+      unique.set(employee.workshift.id, employee.workshift);
     }
 
-    private async upsertWorkshifts(
-        client: PoolClient,
-        employees: any[],
-    ) {
-        const unique = new Map();
+    const workshifts = [...unique.values()];
 
-        for (const employee of employees) {
-            unique.set(
-                employee.workshift.id,
-                employee.workshift,
-            );
-        }
+    const BATCH_SIZE = Number(process.env.PG_BULK_BATCH_SIZE ?? 500);
 
-        const workshifts = [
-            ...unique.values(),
-        ];
+    const batches = this.chunk(workshifts, BATCH_SIZE);
 
-        const BATCH_SIZE = Number(
-          process.env.MONGO_BULK_BATCH_SIZE ?? 500,
-        );
+    for (const batch of batches) {
+      const params: any[] = [];
 
-        const batches =
-            this.chunk(
-                workshifts,
-                BATCH_SIZE,
-            );
+      batch.forEach((item) => {
+        params.push(item.id, item.description);
+      });
 
-        for (const batch of batches) {
-            const params: any[] = [];
+      const placeholders = this.createPlaceholders(batch.length, 2);
 
-            batch.forEach((item) => {
-                params.push(
-                    item.id,
-                    item.description,
-                );
-            });
-
-            const placeholders =
-                this.createPlaceholders(
-                    batch.length,
-                    2,
-                );
-
-            await client.query(
-                `
+      await client.query(
+        `
                 INSERT INTO teste.workshifts (
                   id,
                   description
@@ -728,56 +489,35 @@ export class SeniorSyncService {
                 description =
                   EXCLUDED.description
                 `,
-                params,
-            );
-        }
+        params,
+      );
+    }
+  }
+
+  private async upsertWorkstationGroups(client: PoolClient, employees: any[]) {
+    const unique = new Map();
+
+    for (const employee of employees) {
+      unique.set(employee.workstationGroup.id, employee.workstationGroup);
     }
 
-    private async upsertWorkstationGroups(
-        client: PoolClient,
-        employees: any[],
-    ) {
-        const unique = new Map();
+    const workstationGroups = [...unique.values()];
 
-        for (const employee of employees) {
-            unique.set(
-                employee.workstationGroup.id,
-                employee.workstationGroup,
-            );
-        }
+    const BATCH_SIZE = Number(process.env.PG_BULK_BATCH_SIZE ?? 500);
 
-        const workstationGroups = [
-            ...unique.values(),
-        ];
+    const batches = this.chunk(workstationGroups, BATCH_SIZE);
 
-        const BATCH_SIZE = Number(
-          process.env.MONGO_BULK_BATCH_SIZE ?? 500,
-        );
+    for (const batch of batches) {
+      const params: any[] = [];
 
-        const batches =
-            this.chunk(
-                workstationGroups,
-                BATCH_SIZE,
-            );
+      batch.forEach((item) => {
+        params.push(item.id, item.name);
+      });
 
-        for (const batch of batches) {
-            const params: any[] = [];
+      const placeholders = this.createPlaceholders(batch.length, 2);
 
-            batch.forEach((item) => {
-                params.push(
-                    item.id,
-                    item.name,
-                );
-            });
-
-            const placeholders =
-                this.createPlaceholders(
-                    batch.length,
-                    2,
-                );
-
-            await client.query(
-                `
+      await client.query(
+        `
                 INSERT INTO teste.workstation_groups (
                   id,
                   name
@@ -791,62 +531,49 @@ export class SeniorSyncService {
                 name =
                   EXCLUDED.name
                 `,
-                params,
-            );
-        }
-    }
-
-    private async upsertEmployees(
-      client: PoolClient,
-      employees: any[],
-    ) {
-
-      const BATCH_SIZE = Number(
-        process.env.MONGO_BULK_BATCH_SIZE ?? 500,
-      );    
-
-      const batches = this.chunk(
-        employees,
-        BATCH_SIZE,
+        params,
       );
+    }
+  }
 
-      for (const batch of batches) {
-        const params: unknown[] = [];
+  private async upsertEmployees(client: PoolClient, employees: any[]) {
+    const BATCH_SIZE = Number(process.env.PG_BULK_BATCH_SIZE ?? 500);
 
-        batch.forEach((employee) => {
-          params.push(
-            employee.id ?? null,
+    const batches = this.chunk(employees, BATCH_SIZE);
 
-            employee.companyNumber ?? null,
-            employee.registerNumber ?? null,
-            employee.registrationNumber ?? null,
+    for (const batch of batches) {
+      const params: unknown[] = [];
 
-            employee.person?.id ?? null,
-            employee.person?.name ?? null,
+      batch.forEach((employee) => {
+        params.push(
+          employee.id ?? null,
 
-            employee.hireDate ?? null,
-            employee.dismissalDate ?? null,
+          employee.companyNumber ?? null,
+          employee.registerNumber ?? null,
+          employee.registrationNumber ?? null,
 
-            employee.hash ?? null,
+          employee.person?.id ?? null,
+          employee.person?.name ?? null,
 
-            employee.employer?.id ?? null,
-            employee.department?.id ?? null,
+          employee.hireDate ?? null,
+          employee.dismissalDate ?? null,
 
-            employee.jobPosition?.id ?? null,
-            employee.workstationGroup?.id ?? null,
-            employee.workshift?.id ?? null,
-            employee.costCenter?.id ?? null,
-          );
-        });
+          employee.hash ?? null,
 
-        const placeholders =
-          this.createPlaceholders(
-            batch.length,
-            15,
-          );
+          employee.employer?.id ?? null,
+          employee.department?.id ?? null,
 
-        await client.query(
-          `
+          employee.jobPosition?.id ?? null,
+          employee.workstationGroup?.id ?? null,
+          employee.workshift?.id ?? null,
+          employee.costCenter?.id ?? null,
+        );
+      });
+
+      const placeholders = this.createPlaceholders(batch.length, 15);
+
+      await client.query(
+        `
           INSERT INTO teste.employees (
             id,
 
@@ -920,8 +647,8 @@ export class SeniorSyncService {
 
             synced_at = NOW()
           `,
-          params,
-        );
-      }
+        params,
+      );
     }
+  }
 }
