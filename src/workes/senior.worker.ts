@@ -1,5 +1,10 @@
+import dotenv from "dotenv";
 import cron from "node-cron";
 import { SeniorSyncService } from "../services/seniorPG.service";
+
+dotenv.config();
+
+const TIME_CRON = String(process.env.TIME_CRON);
 
 export class SeniorSyncWorker {
   private readonly service = new SeniorSyncService();
@@ -13,7 +18,7 @@ export class SeniorSyncWorker {
     void this.execute();
 
     // a cada 5 minutos
-    this.task = cron.schedule("*/5 * * * *", () => this.execute());
+    this.task = cron.schedule(TIME_CRON, () => this.execute());
 
     // node-cron v4: se o tick for "perdido" (event loop ocupado naquele
     // instante), o agendamento pode ser pulado. Aqui reexecutamos assim
