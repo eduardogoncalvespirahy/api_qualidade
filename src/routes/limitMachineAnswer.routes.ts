@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { MachineAnswerController } from "../controllers/machineAnswer.controller";
+import { LimitMachineAnswerController } from "../controllers/limitMachineAnswer.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { accessMiddleware } from "../middlewares/access.middleware";
 import { roleMiddleware } from "../middlewares/role.middleware";
 
 const router = Router();
-const controller = new MachineAnswerController();
+const controller = new LimitMachineAnswerController();
 
 router.post("/", accessMiddleware, authMiddleware, roleMiddleware(['admin']), controller.create);
 router.get("/", accessMiddleware, controller.findAll);
