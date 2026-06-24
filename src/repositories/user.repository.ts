@@ -10,6 +10,8 @@ const employee = new EmployeeRepository();
 const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 const cacheKeys = {
+  ByIdUserProfile: (id: string) => `users_profile:${id}`,
+
   byId: (id: string) => `users:${id}`,
 
   byUsername: (username: string) => `users:username:${username}`,
@@ -109,6 +111,65 @@ export class UserRepository {
     const user = result.rows[0];
 
     await Promise.all([this.cacheUser(user), this.invalidateListCache()]);
+
+    return user;
+  }
+
+  async findByIdUserProfile(id: string): Promise<User | null> {
+    const cacheKey = cacheKeys.ByIdUserProfile(id);
+
+    const cached = await cache.get<User>(cacheKey);
+
+    if (cached) {
+      console.log("Cache HIT:", cacheKey);
+      return cached;
+    }
+
+    const result = await pool.query<User>(
+      `
+      SELECT U.ID AS USER_ID,
+             U.USERNAME AS USER_USERNAME,
+             U.EMAIL AS USER_EMAIL,
+             U.STATUS AS USER_STATUS,
+             EE.ID AS EMPLOYEE_ID,
+             EE.PERSON_NAME AS EMPLOYEE_NOME,
+             EE.REGISTER_NUMBER AS EMPLOYEE_MATRICULA,
+             EE.HIRE_DATE AS EMPLOYEE_DATA_ADMISSAO,
+             ER.ID AS EMPLOYER_ID,
+             LO.ID AS LOCATION_ID,
+             LO.NOME AS LOCATION_NAME,
+             DE.ID AS DEPARTMENT_ID,
+             DE.NAME AS DEPARTMENT_NOME,
+             JO.ID AS JOB_POSITION_ID,
+             JO.NAME AS JOB_POSITION_NOME,
+             WG.ID AS WORKSTATION_GROUP_ID,
+             WG.NAME AS WORKSTATION_GROUP_NOME,
+             WS.ID AS WORKSHIFT_ID,
+             WS.DESCRIPTION AS WORKSHIFT_DESCRICAO,
+             CC.ID AS COST_CENTER_ID,
+             CC.NAME AS COST_CENTER_NOME,
+             EE.SYNCED_AT AS ULTIMA_SINCRONIZACAO
+        FROM TESTE.USERS U
+        JOIN TESTE.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
+        JOIN TESTE.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
+        JOIN TESTE.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
+        JOIN TESTE.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
+        JOIN TESTE.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
+        JOIN TESTE.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
+        JOIN TESTE.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
+        JOIN TESTE.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
+       WHERE U.STATUS = 1 AND U.ID = $1
+      `,
+      [id],
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      return null;
+    }
+
+    await this.cacheUser(user);
 
     return user;
   }

@@ -10,6 +10,7 @@ const User = new UserController();
 router.post("/", accessMiddleware, authMiddleware, roleMiddleware(['admin']), User.create);
 router.get("/", accessMiddleware, authMiddleware, User.findAll);
 router.get("/:id", accessMiddleware, authMiddleware, User.findById);
+router.get("/profile/:id", accessMiddleware, authMiddleware, User.findByIdUserProfile);
 router.put("/:id", accessMiddleware, authMiddleware, roleMiddleware(['admin']), User.update);
 router.delete("/:id", accessMiddleware, authMiddleware, roleMiddleware(['admin']), User.delete);
 

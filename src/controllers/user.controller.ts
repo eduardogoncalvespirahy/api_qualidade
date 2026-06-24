@@ -32,6 +32,18 @@ export class UserController {
     }
   };
 
+  findByIdUserProfile = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const id = req.params.id as string;
+      const user = await this.service.findByIdUserProfile(id);
+      return res.status(200).json(user);
+    } catch (error) {
+      return res.status(404).json({
+        message: error instanceof Error ? error.message : "Usuário não encontrado",
+      });
+    }
+  };
+
   findById = async (req: Request, res: Response): Promise<Response> => {
     try {
       const id = req.params.id as string;
