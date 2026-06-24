@@ -1,6 +1,6 @@
 import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
-import { User, CreateUserDTO, UpdateUserDTO } from "../models/user.model";
+import { User, CreateUserDTO, UpdateUserDTO, UserProfile } from "../models/user.model";
 import { RedisRepository } from "./redis.repository";
 import { EmployeeRepository } from "./employee.repository";
 
@@ -115,40 +115,40 @@ export class UserRepository {
     return user;
   }
 
-  async findByIdUserProfile(id: string): Promise<User | null> {
+  async findByIdUserProfile(id: string): Promise<UserProfile | null> {
     const cacheKey = cacheKeys.ByIdUserProfile(id);
 
-    const cached = await cache.get<User>(cacheKey);
+    const cached = await cache.get<UserProfile>(cacheKey);
 
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
-    const result = await pool.query<User>(
+    const result = await pool.query<UserProfile>(
       `
-      SELECT U.ID AS USER_ID,
-             U.USERNAME AS USER_USERNAME,
-             U.EMAIL AS USER_EMAIL,
-             U.STATUS AS USER_STATUS,
-             EE.ID AS EMPLOYEE_ID,
-             EE.PERSON_NAME AS EMPLOYEE_NOME,
-             EE.REGISTER_NUMBER AS EMPLOYEE_MATRICULA,
-             EE.HIRE_DATE AS EMPLOYEE_DATA_ADMISSAO,
-             ER.ID AS EMPLOYER_ID,
-             LO.ID AS LOCATION_ID,
-             LO.NOME AS LOCATION_NAME,
-             DE.ID AS DEPARTMENT_ID,
-             DE.NAME AS DEPARTMENT_NOME,
-             JO.ID AS JOB_POSITION_ID,
-             JO.NAME AS JOB_POSITION_NOME,
-             WG.ID AS WORKSTATION_GROUP_ID,
-             WG.NAME AS WORKSTATION_GROUP_NOME,
-             WS.ID AS WORKSHIFT_ID,
-             WS.DESCRIPTION AS WORKSHIFT_DESCRICAO,
-             CC.ID AS COST_CENTER_ID,
-             CC.NAME AS COST_CENTER_NOME,
-             EE.SYNCED_AT AS ULTIMA_SINCRONIZACAO
+      SELECT U.ID AS "userId",
+             U.USERNAME AS "userUsername",
+             U.EMAIL AS "userEmail",
+             U.STATUS AS "userStatus",
+             EE.ID AS "employeeId",
+             EE.PERSON_NAME AS "employeeNome",
+             EE.REGISTER_NUMBER AS "employeeMatricula",
+             EE.HIRE_DATE AS "employeeDataAdmissao",
+             ER.ID AS "employerId",
+             LO.ID AS "locationId",
+             LO.NOME AS "locationName",
+             DE.ID AS "departmentId",
+             DE.NAME AS "departmentNome",
+             JO.ID AS "jobPositionId",
+             JO.NAME AS "jobPositionNome",
+             WG.ID AS "workstationGroupId",
+             WG.NAME AS "workstationGroupNome",
+             WS.ID AS "workshiftId",
+             WS.DESCRIPTION AS "workshiftDescricao",
+             CC.ID AS "costCenterId",
+             CC.NAME AS "costCenterNome",
+             EE.SYNCED_AT AS "ultimaSincronizacao"
         FROM TESTE.USERS U
         JOIN TESTE.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
         JOIN TESTE.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
@@ -163,15 +163,15 @@ export class UserRepository {
       [id],
     );
 
-    const user = result.rows[0];
+    const userProfile = result.rows[0] as UserProfile;
 
-    if (!user) {
+    if (!userProfile) {
       return null;
     }
 
-    await this.cacheUser(user);
+    await Promise.all([cache.set(cacheKeys.ByIdUserProfile(userProfile.userId), userProfile, CACHE_TTL)]);
 
-    return user;
+    return userProfile;
   }
 
   async findById(id: string): Promise<User | null> {
