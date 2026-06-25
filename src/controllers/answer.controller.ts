@@ -11,6 +11,7 @@ export class AnswerController {
   create = async (req: Request, res: Response): Promise<Response> => {
     try {
       const item = await this.service.create(req.body);
+      console.log(" teste ",req.body);
       return res.status(201).json(item);
     } catch (error) {
       return res.status(400).json({

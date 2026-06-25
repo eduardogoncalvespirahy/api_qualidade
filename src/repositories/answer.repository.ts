@@ -29,7 +29,8 @@ const SELECT_COLUMNS = `
   descricao,
   status,
   data_criacao as "dataCriacao",
-  data_alteracao as "dataAlteracao"
+  data_alteracao as "dataAlteracao",
+  categorie_id as "categoryId"
 `;
 
 export class AnswerRepository {
@@ -45,21 +46,24 @@ export class AnswerRepository {
         form_id,
         nome,
         descricao,
-        status
+        status,
+        categorie_id
       )
       VALUES
       (
         $1,
         $2,
         $3,
-        COALESCE($4, 1)
+        COALESCE($4, 1),
+        $5
       )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.formId, dto.nome, dto.descricao ?? null, dto.status ?? null],
+      [dto.formId, dto.nome, dto.descricao ?? null, dto.status ?? null, dto.categoryId ?? null],
     );
-
+    
     const answer = result.rows[0];
+    console.log("Criado category: ", answer);
 
     await Promise.all([
       cache.set(cacheKeys.byId(answer.id), answer, CACHE_TTL),
@@ -168,6 +172,7 @@ export class AnswerRepository {
         nome = COALESCE($3, nome),
         descricao = COALESCE($4, descricao),
         status = COALESCE($5, status),
+        categorie_id =  COALESCE($6, categorie_id),
         data_alteracao = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
@@ -178,6 +183,7 @@ export class AnswerRepository {
         dto.nome ?? null,
         dto.descricao ?? null,
         dto.status ?? null,
+        dto.categoryId ?? null
       ],
     );
 
