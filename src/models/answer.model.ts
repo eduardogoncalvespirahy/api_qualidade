@@ -6,6 +6,7 @@ export interface Answer {
   status: number;
   dataCriacao: Date;
   dataAlteracao: Date;
+  categoryId?: number;
 }
 
 export interface CreateAnswerDTO {
@@ -13,6 +14,7 @@ export interface CreateAnswerDTO {
   nome: string;
   descricao?: string | null;
   status?: number;
+  categoryId?: number;
 }
 
 export interface UpdateAnswerDTO {
@@ -20,4 +22,5 @@ export interface UpdateAnswerDTO {
   nome?: string;
   descricao?: string | null;
   status?: number;
+  categoryId?: number;
 }
