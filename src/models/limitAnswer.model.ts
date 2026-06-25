@@ -1,8 +1,8 @@
 export interface LimitAnswer {
   id: string;
   answerId: string;
-  limitMax: string | null;
-  limitMin: string | null;
+  limitMax?: string | null;
+  limitMin?: string | null;
   status: number;
   dataCriacao: Date;
   dataAlteracao: Date;
