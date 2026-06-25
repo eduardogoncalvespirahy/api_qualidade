@@ -13,7 +13,7 @@ export interface FaceEngine {
 const loadModule = (name: string): Promise<any> => import(name);
 
 /**
- * Engine baseada em @vladmandic/face-api + @tensorflow/tfjs-node + canvas.
+ * Engine baseada em @vladmandic/face-api + @tensorflow/tfjs + canvas.
  * Os modelos (weights) são carregados de FACE_MODELS_DIR (padrão ./models/face):
  *   ssdMobilenetv1, faceLandmark68Net, faceRecognitionNet.
  */
@@ -33,13 +33,13 @@ export class FaceApiEngine implements FaceEngine {
       let canvas: any;
 
       try {
-        await loadModule("@tensorflow/tfjs-node");
+        await loadModule("@tensorflow/tfjs");
         faceapi = await loadModule("@vladmandic/face-api");
         canvas = await loadModule("canvas");
       } catch (error) {
         throw new Error(
           "Dependências de reconhecimento facial ausentes. Instale: " +
-            "@tensorflow/tfjs-node @vladmandic/face-api canvas. Detalhe: " +
+            "@tensorflow/tfjs @vladmandic/face-api canvas. Detalhe: " +
             (error instanceof Error ? error.message : String(error)),
         );
       }

@@ -12,8 +12,11 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "@tensorflow/tfjs": "^4.22.0",
+    "@vladmandic/face-api": "^1.7.15",
     "axios": "^1.18.0",
     "bcrypt": "^6.0.0",
+    "canvas": "^3.2.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
