@@ -24,7 +24,10 @@ const cacheKeys = {
 const SELECT_COLUMNS = `
   id,
   answer_id as "AnswerId",
-  resposta
+  resposta,
+  limits_answer_id as "limitsAnswerId",
+  data_criacao as "dataCriacao",
+  data_alteracao as "dataAlteracao"
 `;
 
 export class AnswerResultRepository {
@@ -34,16 +37,29 @@ export class AnswerResultRepository {
 
   async create(dto: CreateAnswerResultDTO): Promise<AnswerResult> {
     const result = await pool.query<AnswerResult>(
+      /*  id: string;
+          AnswerId: string;
+          resposta: string;
+          limitsAnswerId?: string;
+          dataCriacao?: Date;
+          dataAlteracao?: Date
+      */
       `
       INSERT INTO teste.answer_result
       (
         answer_id,
-        resposta
+        resposta,
+        limits_answer_id,
+        data_criacao,
+        data_alteracao
       )
       VALUES
       (
         $1,
-        $2
+        $2,
+        $3,
+        $4,
+        COALESCE($5, 1)
       )
       RETURNING ${SELECT_COLUMNS}
       `,
