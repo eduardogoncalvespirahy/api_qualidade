@@ -7,20 +7,32 @@ export class FaceController {
   // POST /face/enroll/:userId  — body: { registerNumber } (foto do Senior) ou { image }
   enroll = async (req: Request, res: Response) => {
     // try {
-      const userId = req.params.userId as string;
-      const { registerNumber, image } = req.body;
+    const userId = req.params.userId as string;
+    const { registerNumber, image } = req.body;
 
-      if (image) {
-        await this.service.enrollFromImage(userId, image);
-      } else if (registerNumber !== undefined) {
-        await this.service.enrollFromSenior(userId, String(registerNumber));
-      } else {
-        return res.status(400).json({
-          message: "Informe 'registerNumber' (foto do Senior) ou 'image'.",
-        });
-      }
+    if (!req.file && !image && registerNumber === undefined) {
+      return res.status(400).json({
+        message: "Informe 'registerNumber' (foto do Senior) ou 'image'.",
+      });
+    }
 
-      return res.status(204).send();
+    console.log("Requisição: ",req);
+
+    const imagemBuffer = req.file?.buffer;
+
+    if (image) {
+      await this.service.enrollFromImage(userId, image);
+    } else if (registerNumber !== undefined) {
+      await this.service.enrollFromSenior(userId, String(registerNumber));
+    } else if (imagemBuffer) {
+      await this.service.enrollFromImage(userId, imagemBuffer);
+    } else {
+      return res.status(400).json({
+        message: "Arquivo de imagem não encontrado em req.file.",
+      });
+    }
+
+    return res.status(204).send();
     // } catch (error: any) {
     //   return res.status(400).json({ message: error.message });
     // }
