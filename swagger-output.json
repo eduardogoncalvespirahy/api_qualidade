@@ -5,7 +5,7 @@
     "title": "API Node.js Backend Qualidade",
     "description": "Api Nodejs Backend Qualidade com TypeScript, Express e Redis"
   },
-  "host": "localhost:3000",
+  "host": "0.0.0.0:3000",
   "basePath": "/",
   "schemes": [
     "http",

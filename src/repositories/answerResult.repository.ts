@@ -37,33 +37,22 @@ export class AnswerResultRepository {
 
   async create(dto: CreateAnswerResultDTO): Promise<AnswerResult> {
     const result = await pool.query<AnswerResult>(
-      /*  id: string;
-          AnswerId: string;
-          resposta: string;
-          limitsAnswerId?: string;
-          dataCriacao?: Date;
-          dataAlteracao?: Date
-      */
       `
       INSERT INTO teste.answer_result
       (
         answer_id,
         resposta,
-        limits_answer_id,
-        data_criacao,
-        data_alteracao
+        limits_answer_id
       )
       VALUES
       (
         $1,
         $2,
-        $3,
-        $4,
-        COALESCE($5, 1)
+        $3
       )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.AnswerId, dto.resposta],
+      [dto.AnswerId, dto.resposta, dto.limitsAnswerId],
     );
 
     const answerResult = result.rows[0];
@@ -112,7 +101,7 @@ export class AnswerResultRepository {
       SELECT ${SELECT_COLUMNS}
       FROM teste.answer_result
       WHERE answer_id = $1
-      ORDER BY id ASC
+      ORDER BY DATA_CRIACAO DESC LIMIT 1
       `,
       [answerId],
     );
