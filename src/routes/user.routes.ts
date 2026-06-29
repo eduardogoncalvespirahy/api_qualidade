@@ -11,6 +11,7 @@ router.post("/", accessMiddleware, authMiddleware, roleMiddleware(['admin']), Us
 router.get("/", accessMiddleware, authMiddleware, User.findAll);
 router.get("/:id", accessMiddleware, authMiddleware, User.findById);
 router.get("/profile/:id", accessMiddleware, authMiddleware, User.findByIdUserProfile);
+router.get("/:registerNumber", accessMiddleware, authMiddleware, User.findByRegisterNumber);
 router.put("/:id", accessMiddleware, authMiddleware, roleMiddleware(['admin']), User.update);
 router.delete("/:id", accessMiddleware, authMiddleware, roleMiddleware(['admin']), User.delete);
 

@@ -14,7 +14,8 @@ export class UserController {
       return res.status(201).json(user);
     } catch (error) {
       return res.status(400).json({
-        message: error instanceof Error ? error.message : "Erro ao criar usuário",
+        message:
+          error instanceof Error ? error.message : "Erro ao criar usuário",
       });
     }
   };
@@ -27,19 +28,24 @@ export class UserController {
       return res.status(200).json(users);
     } catch (error) {
       return res.status(500).json({
-        message: error instanceof Error ? error.message : "Erro ao listar usuários",
+        message:
+          error instanceof Error ? error.message : "Erro ao listar usuários",
       });
     }
   };
 
-  findByIdUserProfile = async (req: Request, res: Response): Promise<Response> => {
+  findByIdUserProfile = async (
+    req: Request,
+    res: Response,
+  ): Promise<Response> => {
     try {
       const id = req.params.id as string;
       const user = await this.service.findByIdUserProfile(id);
       return res.status(200).json(user);
     } catch (error) {
       return res.status(404).json({
-        message: error instanceof Error ? error.message : "Usuário não encontrado",
+        message:
+          error instanceof Error ? error.message : "Usuário não encontrado",
       });
     }
   };
@@ -51,7 +57,35 @@ export class UserController {
       return res.status(200).json(user);
     } catch (error) {
       return res.status(404).json({
-        message: error instanceof Error ? error.message : "Usuário não encontrado",
+        message:
+          error instanceof Error ? error.message : "Usuário não encontrado",
+      });
+    }
+  };
+
+  findByRegisterNumber = async (
+    req: Request,
+    res: Response,
+  ): Promise<Response> => {
+    try {
+      const rawRegisterNumber = req.params.registerNumber;
+
+      if (Array.isArray(rawRegisterNumber)) {
+        return res.status(400).json({ message: "Número de registro inválido" });
+      }
+
+      const registerNumber = Number(rawRegisterNumber);
+
+      if (!Number.isInteger(registerNumber)) {
+        return res.status(400).json({ message: "Número de registro inválido" });
+      }
+
+      const user = await this.service.findByRegisterNumber(registerNumber);
+      return res.status(200).json(user);
+    } catch (error) {
+      return res.status(404).json({
+        message:
+          error instanceof Error ? error.message : "Usuário não encontrado",
       });
     }
   };
@@ -63,7 +97,8 @@ export class UserController {
       return res.status(200).json(user);
     } catch (error) {
       return res.status(400).json({
-        message: error instanceof Error ? error.message : "Erro ao atualizar usuário",
+        message:
+          error instanceof Error ? error.message : "Erro ao atualizar usuário",
       });
     }
   };
@@ -75,7 +110,8 @@ export class UserController {
       return res.status(204).send();
     } catch (error) {
       return res.status(404).json({
-        message: error instanceof Error ? error.message : "Usuário não encontrado",
+        message:
+          error instanceof Error ? error.message : "Usuário não encontrado",
       });
     }
   };

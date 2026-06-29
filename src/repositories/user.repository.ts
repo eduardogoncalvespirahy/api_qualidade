@@ -280,11 +280,11 @@ export class UserRepository {
       `
       SELECT
         u.id,
-        u.employee_id    as "employeeId",
+        u.employee_id as "employeeId",
         u.username,
         u.email,
         u.status,
-        u.data_criacao   as "dataCriacao",
+        u.data_criacao as "dataCriacao",
         u.data_alteracao as "dataAlteracao"
       FROM teste.users u
       INNER JOIN teste.employees e
