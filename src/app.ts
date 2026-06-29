@@ -15,9 +15,15 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(helmet());
 
+const allowedOrigins = (
+  process.env.CORS_ORIGIN ?? "http://localhost:4200,http://localhost:3000"
+)
+  .split(",")
+  .map((origin) => origin.trim());
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: allowedOrigins,
     credentials: true,
   }),
 );
