@@ -1,5 +1,10 @@
 import { UserRepository } from "../repositories/user.repository";
-import { User, CreateUserDTO, UpdateUserDTO, UserProfile } from "../models/user.model";
+import {
+  User,
+  CreateUserDTO,
+  UpdateUserDTO,
+  UserProfile,
+} from "../models/user.model";
 import { PaginatedResult } from "../models/paginate.model";
 
 export class UserService {
@@ -32,16 +37,23 @@ export class UserService {
     return this.repository.findAll(page, limit);
   }
 
-  async findByIdUserProfile(id: string): Promise<UserProfile> {
-    const user = await this.repository.findByIdUserProfile(id);
+  async findAllUserProfile(
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<UserProfile>> {
+    return this.repository.findAllUserProfile(page, limit);
+  }
+
+  async findById(id: string): Promise<User> {
+    const user = await this.repository.findById(id);
     if (!user) {
       throw new Error("Usuário não encontrado");
     }
     return user;
   }
 
-  async findById(id: string): Promise<User> {
-    const user = await this.repository.findById(id);
+  async findByIdUserProfile(id: string): Promise<UserProfile> {
+    const user = await this.repository.findByIdUserProfile(id);
     if (!user) {
       throw new Error("Usuário não encontrado");
     }

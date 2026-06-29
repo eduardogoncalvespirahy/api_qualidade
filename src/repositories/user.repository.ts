@@ -1,6 +1,11 @@
 import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
-import { User, CreateUserDTO, UpdateUserDTO, UserProfile } from "../models/user.model";
+import {
+  User,
+  CreateUserDTO,
+  UpdateUserDTO,
+  UserProfile,
+} from "../models/user.model";
 import { RedisRepository } from "./redis.repository";
 import { EmployeeRepository } from "./employee.repository";
 
@@ -10,7 +15,7 @@ const employee = new EmployeeRepository();
 const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 const cacheKeys = {
-  ByIdUserProfile: (id: string) => `users_profile:${id}`,
+  // user
 
   byId: (id: string) => `users:${id}`,
 
@@ -27,6 +32,17 @@ const cacheKeys = {
     `users:page:${page}:limit:${limit}`,
 
   listPattern: () => "users:*",
+
+  // user profile
+
+  ByIdUserProfile: (id: string) => `users_profile:${id}`,
+
+  AllUsersProfile: () => "users_profile:all",
+
+  paginatedUsersProfile: (page: number, limit: number) =>
+    `users_profile:page:${page}:limit:${limit}`,
+
+  listPatternUsersProfile: () => "users_profile:*",
 };
 
 const SELECT_COLUMNS = `
@@ -42,6 +58,7 @@ const SELECT_COLUMNS = `
 export class UserRepository {
   private async invalidateListCache(): Promise<void> {
     await cache.deleteByPattern(cacheKeys.listPattern());
+    await cache.deleteByPattern(cacheKeys.listPatternUsersProfile());
   }
 
   private async getRegisterNumber(
@@ -169,7 +186,13 @@ export class UserRepository {
       return null;
     }
 
-    await Promise.all([cache.set(cacheKeys.ByIdUserProfile(userProfile.userId), userProfile, CACHE_TTL)]);
+    await Promise.all([
+      cache.set(
+        cacheKeys.ByIdUserProfile(userProfile.userId),
+        userProfile,
+        CACHE_TTL,
+      ),
+    ]);
 
     return userProfile;
   }
@@ -351,6 +374,104 @@ export class UserRepository {
     const total = Number(countResult.rows[0].total);
 
     const response: PaginatedResult<User> = {
+      data: rowsResult.rows,
+      total,
+      page: isPaginated ? page : null,
+      limit: isPaginated ? limit : null,
+      totalPages: isPaginated ? Math.ceil(total / limit) : null,
+    };
+
+    await cache.set(cacheKey, response, CACHE_TTL);
+
+    return response;
+  }
+
+  async findAllUserProfile(
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<UserProfile>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
+
+    const cacheKey = isPaginated
+      ? cacheKeys.paginatedUsersProfile(page, limit)
+      : cacheKeys.AllUsersProfile();
+
+    const cached = await cache.get<PaginatedResult<UserProfile>>(cacheKey);
+
+    if (cached) {
+      console.log("Cache HIT:", cacheKey);
+      return cached;
+    }
+
+    let query = `
+      SELECT U.ID AS "userId",
+             U.USERNAME AS "userUsername",
+             U.EMAIL AS "userEmail",
+             U.STATUS AS "userStatus",
+             EE.ID AS "employeeId",
+             EE.PERSON_NAME AS "employeeNome",
+             EE.REGISTER_NUMBER AS "employeeMatricula",
+             EE.HIRE_DATE AS "employeeDataAdmissao",
+             ER.ID AS "employerId",
+             LO.ID AS "locationId",
+             LO.NOME AS "locationName",
+             DE.ID AS "departmentId",
+             DE.NAME AS "departmentNome",
+             JO.ID AS "jobPositionId",
+             JO.NAME AS "jobPositionNome",
+             WG.ID AS "workstationGroupId",
+             WG.NAME AS "workstationGroupNome",
+             WS.ID AS "workshiftId",
+             WS.DESCRIPTION AS "workshiftDescricao",
+             CC.ID AS "costCenterId",
+             CC.NAME AS "costCenterNome",
+             EE.SYNCED_AT AS "ultimaSincronizacao"
+        FROM TESTE.USERS U
+        JOIN TESTE.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
+        JOIN TESTE.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
+        JOIN TESTE.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
+        JOIN TESTE.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
+        JOIN TESTE.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
+        JOIN TESTE.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
+        JOIN TESTE.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
+        JOIN TESTE.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
+       WHERE U.STATUS = 1
+    `;
+
+    const params: any[] = [];
+
+    if (isPaginated) {
+      query += `
+        LIMIT $1
+        OFFSET $2
+      `;
+
+      params.push(limit, (page - 1) * limit);
+    }
+
+    const [rowsResult, countResult] = await Promise.all([
+      pool.query<UserProfile>(query, params),
+      pool.query<{ total: string }>(
+        `
+        SELECT COUNT(*) AS total
+          FROM TESTE.USERS U
+          JOIN TESTE.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
+          JOIN TESTE.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
+          JOIN TESTE.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
+          JOIN TESTE.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
+          JOIN TESTE.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
+          JOIN TESTE.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
+          JOIN TESTE.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
+          JOIN TESTE.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
+         WHERE U.STATUS = 1
+        `,
+      ),
+    ]);
+
+    const total = Number(countResult.rows[0].total);
+
+    const response: PaginatedResult<UserProfile> = {
       data: rowsResult.rows,
       total,
       page: isPaginated ? page : null,

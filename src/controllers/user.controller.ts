@@ -34,13 +34,29 @@ export class UserController {
     }
   };
 
-  findByIdUserProfile = async (
+  findAllUserProfile = async (
     req: Request,
     res: Response,
   ): Promise<Response> => {
     try {
+      const page = Number(req.query.page) || undefined;
+      const limit = Number(req.query.limit) || undefined;
+      const users = await this.service.findAllUserProfile(page, limit);
+      return res.status(200).json(users);
+    } catch (error) {
+      return res.status(500).json({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erro ao listar perfil de usuários",
+      });
+    }
+  };
+
+  findById = async (req: Request, res: Response): Promise<Response> => {
+    try {
       const id = req.params.id as string;
-      const user = await this.service.findByIdUserProfile(id);
+      const user = await this.service.findById(id);
       return res.status(200).json(user);
     } catch (error) {
       return res.status(404).json({
@@ -50,10 +66,13 @@ export class UserController {
     }
   };
 
-  findById = async (req: Request, res: Response): Promise<Response> => {
+  findByIdUserProfile = async (
+    req: Request,
+    res: Response,
+  ): Promise<Response> => {
     try {
       const id = req.params.id as string;
-      const user = await this.service.findById(id);
+      const user = await this.service.findByIdUserProfile(id);
       return res.status(200).json(user);
     } catch (error) {
       return res.status(404).json({
