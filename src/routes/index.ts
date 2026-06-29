@@ -12,6 +12,8 @@ import locationRoutes from "./location.routes";
 import answerRoutes from "./answer.routes";
 import machineRoutes from "./machine.routes";
 
+import answerGroups from "./answerGroups.routes";
+import answerGroupItems from "./answerGroupItems.routes";
 import answerResultRoutes from "./answerResult.routes";
 import breakFormRoutes from "./breakForm.routes";
 import breakMachineRoutes from "./breakMachine.routes";
@@ -50,6 +52,8 @@ router.use("/locations", locationRoutes);
 router.use("/answers", answerRoutes);
 router.use("/machines", machineRoutes);
 
+router.use("/answer-groups", answerGroups);
+router.use("/answer-group-items", answerGroupItems);
 router.use("/answer-result", answerResultRoutes);
 router.use("/break-forms", breakFormRoutes);
 router.use("/break-machines", breakMachineRoutes);
