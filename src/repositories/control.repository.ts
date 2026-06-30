@@ -26,6 +26,7 @@ const SELECT_COLUMNS = `
   id,
   form_id as "formId",
   user_id as "userId",
+  file_id as "fileId",
   observacao,
   data_emissao as "dataEmissao",
   data_criacao as "dataCriacao",
@@ -44,19 +45,21 @@ export class ControlRepository {
       (
         form_id,
         user_id,
+        file_id,
         observacao,
-        data_emissao
+        data_criacao
       )
       VALUES
       (
         $1,
         $2,
         $3,
-        COALESCE($4, CURRENT_TIMESTAMP)
+        $4,
+        COALESCE($5, CURRENT_TIMESTAMP)
       )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.formId, dto.userId, dto.observacao ?? null, dto.dataEmissao ?? null],
+      [dto.formId, dto.userId, dto.fileId, dto.observacao ?? null, dto.dataEmissao ?? null],
     );
 
     const control = result.rows[0];
@@ -105,7 +108,7 @@ export class ControlRepository {
       SELECT ${SELECT_COLUMNS}
       FROM teste.controls
       WHERE form_id = $1
-      ORDER BY data_emissao DESC
+      ORDER BY data_criacao DESC
       `,
       [formId],
     );
@@ -119,7 +122,7 @@ export class ControlRepository {
       SELECT ${SELECT_COLUMNS}
       FROM teste.controls
       WHERE user_id = $1
-      ORDER BY data_emissao DESC
+      ORDER BY data_criacao DESC
       `,
       [userId],
     );
@@ -194,8 +197,9 @@ export class ControlRepository {
       SET
         form_id = COALESCE($2, form_id),
         user_id = COALESCE($3, user_id),
-        observacao = COALESCE($4, observacao),
-        data_emissao = COALESCE($5, data_emissao),
+        file_id = COALESCE($4, file_id),
+        observacao = COALESCE($5, observacao),
+        data_criacao = COALESCE($6, data_criacao),
         data_alteracao = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
@@ -204,6 +208,7 @@ export class ControlRepository {
         id,
         dto.formId ?? null,
         dto.userId ?? null,
+        dto.fileId ?? null,
         dto.observacao ?? null,
         dto.dataEmissao ?? null,
       ],
@@ -234,7 +239,8 @@ export class ControlRepository {
       `
       DELETE FROM teste.controls
       WHERE id = $1
-      `,
+      `, 
+      
       [id],
     );
 
