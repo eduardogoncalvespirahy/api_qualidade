@@ -76,7 +76,7 @@ export class SeniorRepository {
             _discriminator: "unaryExpression",
           },
         },
-        maxRows: 7000,
+        maxRows: 1000,
       },
       { headers: this.headers() },
     );
