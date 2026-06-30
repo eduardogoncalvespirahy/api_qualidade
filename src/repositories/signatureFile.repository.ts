@@ -28,7 +28,7 @@ const SELECT_COLUMNS = `
   mime_type as "mimeType",
   tamanho,
   conteudo,
-  hash,
+  hash_sha256 as "hash",
   status,
   data_criacao as "dataCriacao",
   data_alteracao as "dataAlteracao"
@@ -157,7 +157,7 @@ export class SignatureFileRepository {
         mime_type     = COALESCE($5, mime_type),
         tamanho       = COALESCE($6, tamanho),
         conteudo      = COALESCE($7, conteudo),
-        hash_sha256   = COALESCE($8, hash),
+        hash_sha256   = COALESCE($8, hash_sha256),
         status        = COALESCE($9, status),
         data_alteracao = CURRENT_TIMESTAMP
       WHERE id = $1
