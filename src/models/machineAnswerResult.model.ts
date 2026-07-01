@@ -1,15 +1,27 @@
 export interface MachineAnswerResult {
-  id: string;
-  machineAnswerId: string;
-  resposta: string | null;
+  id: string,
+  machineId: string;
+  answerId: string;
+  resposta: string;
+  limitsAnswerId: string | null;
+  dataCriacao: Date;
+  dataAlteracao: Date;
 }
 
 export interface CreateMachineAnswerResultDTO {
-  machineAnswerId: string;
-  resposta?: string | null;
+  machineId: string;
+  answerId: string;
+  resposta: string;
+  limitsAnswerId?: string | null;
+  dataCriacao?: Date;
+  dataAlteracao?: Date;
 }
 
 export interface UpdateMachineAnswerResultDTO {
-  machineAnswerId: string;
-  resposta?: string | null;
+  machineId: string;
+  answerId: string;
+  resposta: string;
+  limitsAnswerId?: string | null;
+  dataCriacao?: Date;
+  dataAlteracao?: Date;
 }
