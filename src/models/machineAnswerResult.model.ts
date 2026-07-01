@@ -1,7 +1,7 @@
 export interface MachineAnswerResult {
   id: string,
   machineId: string;
-  answerId: string;
+  machineAnswerId: string;
   resposta: string;
   limitsAnswerId: string | null;
   dataCriacao: Date;
@@ -10,7 +10,7 @@ export interface MachineAnswerResult {
 
 export interface CreateMachineAnswerResultDTO {
   machineId: string;
-  answerId: string;
+  machineAnswerId: string;
   resposta: string;
   limitsAnswerId?: string | null;
   dataCriacao?: Date;
@@ -19,7 +19,7 @@ export interface CreateMachineAnswerResultDTO {
 
 export interface UpdateMachineAnswerResultDTO {
   machineId: string;
-  answerId: string;
+  machineAnswerId: string;
   resposta: string;
   limitsAnswerId?: string | null;
   dataCriacao?: Date;

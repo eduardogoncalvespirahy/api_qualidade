@@ -25,7 +25,7 @@ const cacheKeys = {
 const SELECT_COLUMNS = `
   id,
   machine_id as "machineId",
-  answer_id as "answerId",
+  machine_answer_id as "machineAnswerId",
   resposta,
   limits_answer_id as "limitAnswerId",
   data_criacao as "dataCriacao",
@@ -45,7 +45,7 @@ export class MachineAnswerResultRepository {
       INSERT INTO teste.machine_answer_result
       (
         machine_id,
-        answer_id,
+        machine_answer_id,
         resposta,
         limits_answer_id,
       )
@@ -58,7 +58,12 @@ export class MachineAnswerResultRepository {
       )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.machineId, dto.answerId, dto.resposta, dto.limitsAnswerId ?? null],
+      [
+        dto.machineId,
+        dto.machineAnswerId,
+        dto.resposta,
+        dto.limitsAnswerId ?? null,
+      ],
     );
 
     const machineAnswerResult = result.rows[0];
@@ -106,17 +111,16 @@ export class MachineAnswerResultRepository {
   }
 
   async findByMachineAnswerId(
-    AnswerId: string,
-    machineId: string,
+    machineAnswerId: string,
   ): Promise<MachineAnswerResult[]> {
     const result = await pool.query<MachineAnswerResult>(
       `
       SELECT ${SELECT_COLUMNS}
       FROM teste.machine_answer_result
-      WHERE answer_id = $1 AND machine_id
+      WHERE machine_answer_id = $1
       ORDER BY DATA_CRIACAO DESC LIMIT 1
       `,
-      [AnswerId, machineId],
+      [machineAnswerId],
     );
 
     return result.rows;
@@ -192,12 +196,19 @@ export class MachineAnswerResultRepository {
       UPDATE teste.machine_answer_result
       SET
         machineid = COALESCE($2, machine_id),
-        answer_id = COALESCE($3, answer_id),
+        machine_answer_id = COALESCE($3, machine_answer_id),
         resposta = COALESCE($4, resposta),
+        limits_answer_id = COALESCE($5, limits_answer_id)
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
       `,
-      [id, dto.machineId ?? null, dto.answerId ?? null, dto.resposta],
+      [
+        id,
+        dto.machineId ?? null,
+        dto.machineAnswerId ?? null,
+        dto.resposta,
+        dto.limitsAnswerId ?? null,
+      ],
     );
 
     const machineAnswerResult = result.rows[0];
