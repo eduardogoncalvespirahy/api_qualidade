@@ -6,12 +6,14 @@ import swaggerUi from "swagger-ui-express";
 import routes from "./routes";
 import swaggerDocument from "../swagger-output.json";
 import { requestLogger } from "./middlewares/requestLogger.middleware";
+import { swaggerAuth } from "./middlewares/swagger.middleware";
 
 const app = express();
 
 app.use(express.json());
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use("/api-docs", swaggerAuth, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 
 app.use(helmet());
 

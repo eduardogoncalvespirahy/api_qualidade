@@ -1,15 +1,14 @@
 import { Router } from "express";
 import { SyncLogController } from "../controllers/syncLog.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import { accessMiddleware } from "../middlewares/access.middleware";
 import { roleMiddleware } from "../middlewares/role.middleware";
 
 const router = Router();
 const controller = new SyncLogController();
 
-router.post("/", accessMiddleware, authMiddleware, roleMiddleware(['admin']), controller.create);
-router.get("/", accessMiddleware, authMiddleware, controller.findAll);
-router.get("/:id", accessMiddleware, authMiddleware, controller.findById);
-router.delete("/:id", accessMiddleware, authMiddleware, roleMiddleware(['admin']), controller.delete);
+router.post("/", authMiddleware, roleMiddleware(["ADMIN"]), controller.create);
+router.get("/", authMiddleware, roleMiddleware(["ADMIN"]), controller.findAll);
+router.get("/:id", authMiddleware, roleMiddleware(["ADMIN"]), controller.findById);
+router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN"]), controller.delete);
 
 export default router;

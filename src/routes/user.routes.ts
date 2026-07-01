@@ -1,19 +1,18 @@
 import { Router } from "express";
 import { UserController } from "../controllers/user.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import { accessMiddleware } from "../middlewares/access.middleware";
 import { roleMiddleware } from "../middlewares/role.middleware";
 
 const router = Router();
-const User = new UserController();
+const controller = new UserController();
 
-router.post("/", accessMiddleware, authMiddleware, roleMiddleware(['admin']), User.create);
-router.get("/", accessMiddleware, authMiddleware, User.findAll);
-router.get("/profiles", accessMiddleware, authMiddleware, User.findAllUserProfile);
-router.get("/:id", accessMiddleware, authMiddleware, User.findById);
-router.get("/profile/:id", accessMiddleware, authMiddleware, User.findByIdUserProfile);
-router.get("/registerNumber/:registerNumber", accessMiddleware, authMiddleware, User.findByRegisterNumber);
-router.put("/:id", accessMiddleware, authMiddleware, roleMiddleware(['admin']), User.update);
-router.delete("/:id", accessMiddleware, authMiddleware, roleMiddleware(['admin']), User.delete);
+router.post("/", authMiddleware, roleMiddleware(["ADMIN"]), controller.create);
+router.get("/", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findAll);
+router.get("/profiles", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findAllUserProfile);
+router.get("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findById);
+router.get("/profile/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findByIdUserProfile);
+router.get("/registerNumber/:registerNumber", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findByRegisterNumber);
+router.put("/:id", authMiddleware, roleMiddleware(["ADMIN"]), controller.update);
+router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN"]), controller.delete);
 
 export default router;
