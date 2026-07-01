@@ -64,7 +64,6 @@ export class FaceAuthService {
 
     const payload: JwtPayload = {
       id: user.id,
-      credentialId: credential.id,
       roles,
     };
 

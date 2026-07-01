@@ -2193,6 +2193,29 @@
         }
       }
     },
+    "/credentials-roles/roles/credential/{credentialId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "credentialId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
     "/credentials-roles/{credentialId}/{roleId}": {
       "delete": {
         "description": "",

@@ -14,7 +14,8 @@ export class CredentialRoleController {
       return res.status(201).json(item);
     } catch (error) {
       return res.status(400).json({
-        message: error instanceof Error ? error.message : "Erro ao vincular role",
+        message:
+          error instanceof Error ? error.message : "Erro ao vincular role",
       });
     }
   };
@@ -26,7 +27,25 @@ export class CredentialRoleController {
       return res.status(200).json(items);
     } catch (error) {
       return res.status(500).json({
-        message: error instanceof Error ? error.message : "Erro ao listar vínculos",
+        message:
+          error instanceof Error ? error.message : "Erro ao listar vínculos",
+      });
+    }
+  };
+
+  findRoleNamesByCredential = async (
+    req: Request,
+    res: Response,
+  ): Promise<Response> => {
+    try {
+      const credentialId = req.params.credentialId as string;
+      const roleNames =
+        await this.service.findRoleNamesByCredential(credentialId);
+      return res.status(200).json(roleNames);
+    } catch (error) {
+      return res.status(500).json({
+        message:
+          error instanceof Error ? error.message : "Erro ao listar vínculos",
       });
     }
   };
@@ -39,7 +58,8 @@ export class CredentialRoleController {
       return res.status(204).send();
     } catch (error) {
       return res.status(404).json({
-        message: error instanceof Error ? error.message : "Vínculo não encontrado",
+        message:
+          error instanceof Error ? error.message : "Vínculo não encontrado",
       });
     }
   };
