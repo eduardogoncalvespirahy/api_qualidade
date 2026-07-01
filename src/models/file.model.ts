@@ -1,4 +1,4 @@
-export interface SignatureFile {
+export interface File {
   id: string;
   nome: string;
   nomeOriginal: string;
@@ -12,7 +12,7 @@ export interface SignatureFile {
   dataAlteracao: Date;
 }
 
-export interface CreateSignatureFileDTO {
+export interface CreateFileDTO {
   nome: string;
   nomeOriginal?: string;
   extensao?: string;
@@ -23,7 +23,7 @@ export interface CreateSignatureFileDTO {
   status?: number;
 }
 
-export interface UpdateSignatureFileDTO {
+export interface UpdateFileDTO {
   nome?: string;
   nomeOriginal?: string;
   extensao?: string;

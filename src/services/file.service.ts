@@ -1,19 +1,19 @@
-import { SignatureFileRepository } from "../repositories/signatureFile.repository";
+import { FileRepository } from "../repositories/file.repository";
 import {
-  SignatureFile,
-  CreateSignatureFileDTO,
-  UpdateSignatureFileDTO,
-} from "../models/signatureFile.model";
+  File,
+  CreateFileDTO,
+  UpdateFileDTO,
+} from "../models/file.model";
 import { PaginatedResult } from "../models/paginate.model";
 
-export class SignatureFileService {
-  private readonly repository: SignatureFileRepository;
+export class FileService {
+  private readonly repository: FileRepository;
 
   constructor() {
-    this.repository = new SignatureFileRepository();
+    this.repository = new FileRepository();
   }
 
-  async create(dto: CreateSignatureFileDTO): Promise<SignatureFile> {
+  async create(dto: CreateFileDTO): Promise<File> {
     // nome é obrigatório
     if (!dto.nome) {
       throw new Error("O campo 'nome' é obrigatório");
@@ -22,11 +22,11 @@ export class SignatureFileService {
     return this.repository.create(dto);
   }
 
-  async findAll(page?: number, limit?: number): Promise<PaginatedResult<SignatureFile>> {
+  async findAll(page?: number, limit?: number): Promise<PaginatedResult<File>> {
     return this.repository.findAll(page, limit);
   }
 
-  async findById(id: string): Promise<SignatureFile> {
+  async findById(id: string): Promise<File> {
     const item = await this.repository.findById(id);
 
     if (!item) {
@@ -36,7 +36,7 @@ export class SignatureFileService {
     return item;
   }
 
-  async update(id: string, dto: UpdateSignatureFileDTO): Promise<SignatureFile> {
+  async update(id: string, dto: UpdateFileDTO): Promise<File> {
     await this.findById(id);
 
     const updated = await this.repository.update(id, dto);

@@ -1,10 +1,10 @@
 import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
 import {
-  SignatureFile,
-  CreateSignatureFileDTO,
-  UpdateSignatureFileDTO,
-} from "../models/signatureFile.model";
+  File,
+  CreateFileDTO,
+  UpdateFileDTO,
+} from "../models/file.model";
 import { RedisRepository } from "./redis.repository";
 
 const cache = new RedisRepository();
@@ -34,14 +34,14 @@ const SELECT_COLUMNS = `
   data_alteracao as "dataAlteracao"
 `;
 
-export class SignatureFileRepository {
+export class FileRepository {
   // limpa o cache de listagem toda vez que altero algo
   private async invalidateListCache(): Promise<void> {
     await cache.deleteByPattern(cacheKeys.listPattern());
   }
 
-  async create(dto: CreateSignatureFileDTO): Promise<SignatureFile> {
-    const result = await pool.query<SignatureFile>(
+  async create(dto: CreateFileDTO): Promise<File> {
+    const result = await pool.query<File>(
       `
       INSERT INTO teste.files
       (
@@ -80,16 +80,16 @@ export class SignatureFileRepository {
     return file;
   }
 
-  async findById(id: string): Promise<SignatureFile | null> {
+  async findById(id: string): Promise<File | null> {
     const cacheKey = cacheKeys.byId(id);
 
-    const cached = await cache.get<SignatureFile>(cacheKey);
+    const cached = await cache.get<File>(cacheKey);
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
     }
 
-    const result = await pool.query<SignatureFile>(
+    const result = await pool.query<File>(
       `SELECT ${SELECT_COLUMNS} FROM teste.files WHERE id = $1`,
       [id],
     );
@@ -101,14 +101,14 @@ export class SignatureFileRepository {
     return file;
   }
 
-  async findAll(page?: number, limit?: number): Promise<PaginatedResult<SignatureFile>> {
+  async findAll(page?: number, limit?: number): Promise<PaginatedResult<File>> {
     const isPaginated = page !== undefined && limit !== undefined && page > 0 && limit > 0;
 
     const cacheKey = isPaginated
       ? cacheKeys.paginated(page, limit)
       : cacheKeys.all();
 
-    const cached = await cache.get<PaginatedResult<SignatureFile>>(cacheKey);
+    const cached = await cache.get<PaginatedResult<File>>(cacheKey);
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
@@ -128,13 +128,13 @@ export class SignatureFileRepository {
     }
 
     const [rowsResult, countResult] = await Promise.all([
-      pool.query<SignatureFile>(query, params),
+      pool.query<File>(query, params),
       pool.query<{ total: string }>(`SELECT COUNT(*) AS total FROM teste.files`),
     ]);
 
     const total = Number(countResult.rows[0].total);
 
-    const response: PaginatedResult<SignatureFile> = {
+    const response: PaginatedResult<File> = {
       data: rowsResult.rows,
       total,
       page: isPaginated ? page : null,
@@ -146,8 +146,8 @@ export class SignatureFileRepository {
     return response;
   }
 
-  async update(id: string, dto: UpdateSignatureFileDTO): Promise<SignatureFile | null> {
-    const result = await pool.query<SignatureFile>(
+  async update(id: string, dto: UpdateFileDTO): Promise<File | null> {
+    const result = await pool.query<File>(
       `
       UPDATE teste.files
       SET
@@ -187,7 +187,7 @@ export class SignatureFileRepository {
     return file;
   }
 
-  async delete(id: string): Promise<SignatureFile | null> {
+  async delete(id: string): Promise<File | null> {
     const file = await this.findById(id);
     if (!file) return null;
 

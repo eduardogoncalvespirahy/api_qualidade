@@ -38,8 +38,7 @@ import workshiftRoutes from "./workshift.routes";
 import workstationGroupRoutes from "./workstationGroup.routes";
 import syncLogRoutes from "./syncLog.routes";
 import faceRoutes from "./face.routes";
-import signatureFileRoutes from "./signatureFile.routes";
-
+import FileRoutes from "./file.routes";
 
 const router = express.Router();
 
@@ -78,7 +77,7 @@ router.use("/workshifts", workshiftRoutes);
 router.use("/workstation-groups", workstationGroupRoutes);
 router.use("/sync-logs", syncLogRoutes);
 
-router.use("/signature-files", signatureFileRoutes);
+router.use("/files", FileRoutes);
 
 // reconhecimento facial: /auth/face e /face/enroll/:userId
 router.use(faceRoutes);
