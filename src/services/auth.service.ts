@@ -65,6 +65,7 @@ export class AuthService {
     };
 
     const userId = user.id;
+    const credentialId = credential.id;
 
     const token = jwt.sign(payload, process.env.JWT_SECRET!, {
       expiresIn: "1d",
@@ -82,6 +83,6 @@ export class AuthService {
 
     await this.credentials.touchLastLogin(credential.id);
 
-    return { userId, token, refreshToken };
+    return { userId, credentialId, token, refreshToken };
   }
 }

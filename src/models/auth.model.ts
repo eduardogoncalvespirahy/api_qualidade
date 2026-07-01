@@ -10,6 +10,7 @@ export interface LoginDTO {
 
 export interface LoginResponseDTO {
   userId: string;
+  credentialId: string;
   token: string;
   refreshToken: string;
 }
