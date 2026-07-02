@@ -39,6 +39,7 @@ import workstationGroupRoutes from "./workstationGroup.routes";
 import syncLogRoutes from "./syncLog.routes";
 import faceRoutes from "./face.routes";
 import FileRoutes from "./file.routes";
+import credentialLocationRoutes from "./credentialLocation.routes";
 
 const router = express.Router();
 
@@ -66,6 +67,7 @@ router.use("/machine-answer-result", machineAnswerResultRoutes);
 
 router.use("/credentials", credentialRoutes);
 router.use("/credentials-roles", credentialRoleRoutes);
+router.use("/credentials-locations", credentialLocationRoutes);
 router.use("/sessions", sessionRoutes);
 
 router.use("/employees", employeeRoutes);
