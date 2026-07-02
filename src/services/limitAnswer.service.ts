@@ -28,6 +28,14 @@ export class LimitAnswerService {
     return this.repository.findAll(page, limit);
   }
 
+  async findAllByAnswerId(
+    answerId: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<LimitAnswer>> {
+    return this.repository.findAllByAnswerId(answerId, page, limit);
+  }
+
   async findById(id: string): Promise<LimitAnswer> {
     const item = await this.repository.findById(id);
 

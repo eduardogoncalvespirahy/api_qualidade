@@ -178,6 +178,70 @@ export class LimitAnswerRepository {
     return response;
   }
 
+  async findAllByAnswerId(
+    answerId: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<LimitAnswer>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
+
+    const cacheKey = isPaginated
+      ? cacheKeys.paginated(page, limit)
+      : cacheKeys.all();
+
+    const cached = await cache.get<PaginatedResult<LimitAnswer>>(cacheKey);
+
+    if (cached) {
+      console.log("Cache HIT:", cacheKey);
+      return cached;
+    }
+
+    let query = `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.limits_answers
+      WHERE answer_id = $1
+      ORDER BY data_criacao DESC
+    `;
+
+    const params: unknown[] = [answerId];
+
+    if (isPaginated) {
+      query += `
+        LIMIT $2
+        OFFSET $3
+      `;
+
+      params.push(limit, (page - 1) * limit);
+    }
+
+    const [rowsResult, countResult] = await Promise.all([
+      pool.query<LimitAnswer>(query, params),
+      pool.query<{ total: string }>(
+        `
+        SELECT COUNT(*) AS total
+        FROM teste.limits_answers
+        WHERE answer_id = $1
+        `,
+        [answerId],
+      ),
+    ]);
+
+    const total = Number(countResult.rows[0].total);
+
+    const response: PaginatedResult<LimitAnswer> = {
+      data: rowsResult.rows,
+      total,
+      page: isPaginated ? page : null,
+      limit: isPaginated ? limit : null,
+      totalPages: isPaginated ? Math.ceil(total / limit) : null,
+    };
+
+    await cache.set(cacheKey, response, CACHE_TTL);
+
+    return response;
+  }
+
   async update(
     id: string,
     dto: UpdateLimitAnswerDTO,

@@ -1988,6 +1988,32 @@
         }
       }
     },
+    "/limits-answers/answer/{answerId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "answerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
     "/limits-answers/{id}": {
       "get": {
         "description": "",
