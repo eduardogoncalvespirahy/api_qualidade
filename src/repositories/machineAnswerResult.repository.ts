@@ -26,6 +26,7 @@ const SELECT_COLUMNS = `
   id,
   machine_id as "machineId",
   machine_answer_id as "machineAnswerId",
+  control_id as "controlId",
   resposta,
   limits_answer_id as "limitAnswerId",
   data_criacao as "dataCriacao",
@@ -46,6 +47,7 @@ export class MachineAnswerResultRepository {
       (
         machine_id,
         machine_answer_id,
+        control_id,
         resposta,
         limits_answer_id,
       )
@@ -54,13 +56,15 @@ export class MachineAnswerResultRepository {
         $1,
         $2,
         $3,
-        $4
+        $4,
+        $5
       )
       RETURNING ${SELECT_COLUMNS}
       `,
       [
         dto.machineId,
         dto.machineAnswerId,
+        dto.controlId,
         dto.resposta,
         dto.limitsAnswerId ?? null,
       ],
@@ -197,8 +201,9 @@ export class MachineAnswerResultRepository {
       SET
         machineid = COALESCE($2, machine_id),
         machine_answer_id = COALESCE($3, machine_answer_id),
-        resposta = COALESCE($4, resposta),
-        limits_answer_id = COALESCE($5, limits_answer_id)
+        control_id = COALESCE($4, control_id),
+        resposta = COALESCE($5, resposta),
+        limits_answer_id = COALESCE($6, limits_answer_id)
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
       `,
@@ -206,6 +211,7 @@ export class MachineAnswerResultRepository {
         id,
         dto.machineId ?? null,
         dto.machineAnswerId ?? null,
+        dto.controlId ?? null,
         dto.resposta,
         dto.limitsAnswerId ?? null,
       ],

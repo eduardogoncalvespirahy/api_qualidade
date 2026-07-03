@@ -24,6 +24,7 @@ const cacheKeys = {
 const SELECT_COLUMNS = `
   id,
   answer_id as "AnswerId",
+  control_id as "controlId",
   resposta,
   limits_answer_id as "limitsAnswerId",
   data_criacao as "dataCriacao",
@@ -41,6 +42,7 @@ export class AnswerResultRepository {
       INSERT INTO teste.answer_result
       (
         answer_id,
+        control_id,
         resposta,
         limits_answer_id
       )
@@ -48,11 +50,12 @@ export class AnswerResultRepository {
       (
         $1,
         $2,
-        $3
+        $3,
+        $4
       )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.AnswerId, dto.resposta, dto.limitsAnswerId],
+      [dto.AnswerId, dto.controlId, dto.resposta, dto.limitsAnswerId],
     );
 
     const answerResult = result.rows[0];

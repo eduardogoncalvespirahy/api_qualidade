@@ -17,6 +17,10 @@ export class AnswerResultService {
       throw new Error("O campo 'AnswerId' é obrigatório");
     }
 
+    if (!dto.controlId) {
+      throw new Error("O campo 'controlId' é obrigatório");
+    }
+
     if (!dto.resposta) {
       throw new Error("O campo 'resposta' é obrigatório");
     }
