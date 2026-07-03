@@ -1398,7 +1398,7 @@
         }
       }
     },
-    "/break-forms/": {
+    "/breaks-forms/": {
       "post": {
         "description": "",
         "parameters": [
@@ -1436,7 +1436,7 @@
         }
       }
     },
-    "/break-forms/form/{formId}": {
+    "/breaks-forms/form/{formId}": {
       "get": {
         "description": "",
         "parameters": [
@@ -1462,7 +1462,7 @@
         }
       }
     },
-    "/break-forms/{id}": {
+    "/breaks-forms/{id}": {
       "get": {
         "description": "",
         "parameters": [
@@ -1536,7 +1536,7 @@
         }
       }
     },
-    "/break-machines/": {
+    "/breaks-machines/": {
       "post": {
         "description": "",
         "parameters": [
@@ -1574,7 +1574,7 @@
         }
       }
     },
-    "/break-machines/machine/{machineId}": {
+    "/breaks-machines/machine/{machineId}": {
       "get": {
         "description": "",
         "parameters": [
@@ -1600,7 +1600,7 @@
         }
       }
     },
-    "/break-machines/{id}": {
+    "/breaks-machines/{id}": {
       "get": {
         "description": "",
         "parameters": [
