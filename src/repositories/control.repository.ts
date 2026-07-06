@@ -109,6 +109,7 @@ export class ControlRepository {
       FROM teste.controls
       WHERE form_id = $1
       ORDER BY data_criacao DESC
+      LIMIT 1
       `,
       [formId],
     );
