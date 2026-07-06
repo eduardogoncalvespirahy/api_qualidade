@@ -40,6 +40,8 @@ import syncLogRoutes from "./syncLog.routes";
 import faceRoutes from "./face.routes";
 import FileRoutes from "./file.routes";
 import credentialLocationRoutes from "./credentialLocation.routes";
+import statusRoutes from "./status.routes";
+import controlStatusRoutes from "./controlStatus.routes";
 
 const router = express.Router();
 
@@ -69,6 +71,9 @@ router.use("/credentials", credentialRoutes);
 router.use("/credentials-roles", credentialRoleRoutes);
 router.use("/credentials-locations", credentialLocationRoutes);
 router.use("/sessions", sessionRoutes);
+
+router.use("/status", statusRoutes);
+router.use("/control-status", controlStatusRoutes);
 
 router.use("/employees", employeeRoutes);
 router.use("/employers", employerRoutes);
