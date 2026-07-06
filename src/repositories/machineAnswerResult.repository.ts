@@ -19,6 +19,11 @@ const cacheKeys = {
   paginated: (page: number, limit: number) =>
     `machine-answer-result:page:${page}:limit:${limit}`,
 
+  byControl: (controlId: string) => `machine-answer-result:control:${controlId}`,
+
+  paginatedByControl: (controlId: string, page: number, limit: number) =>
+    `machine-answer-result:control:${controlId}:page:${page}:limit:${limit}`,
+
   listPattern: () => "machine-answer-result:*",
 };
 
@@ -198,8 +203,8 @@ export class MachineAnswerResultRepository {
       page !== undefined && limit !== undefined && page > 0 && limit > 0;
 
     const cacheKey = isPaginated
-      ? cacheKeys.paginated(page, limit)
-      : cacheKeys.all();
+      ? cacheKeys.paginatedByControl(controlId, page, limit)
+      : cacheKeys.byControl(controlId);
 
     const cached =
       await cache.get<PaginatedResult<MachineAnswerResult>>(cacheKey);
@@ -218,14 +223,12 @@ export class MachineAnswerResultRepository {
 
     const params: unknown[] = [controlId];
 
-    if (isPaginated) {
-      query += `
-        LIMIT $1
-        OFFSET $2
-      `;
+ if (isPaginated) {
+  query += ` LIMIT $2 OFFSET $3 `;
+  params.push(limit, (page - 1) * limit);
+}
 
-      params.push(limit, (page - 1) * limit);
-    }
+
 
     const [rowsResult, countResult] = await Promise.all([
       pool.query<MachineAnswerResult>(query, params),
