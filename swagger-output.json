@@ -2290,12 +2290,12 @@
         }
       }
     },
-    "/machine-answer-result/machine-answer/{machineAnswerId}": {
+    "/machine-answer-result/answer/{answerId}": {
       "get": {
         "description": "",
         "parameters": [
           {
-            "name": "machineAnswerId",
+            "name": "answerId",
             "in": "path",
             "required": true,
             "type": "string"
