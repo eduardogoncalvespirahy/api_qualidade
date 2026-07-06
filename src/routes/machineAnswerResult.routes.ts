@@ -9,7 +9,7 @@ const controller = new MachineAnswerResultController();
 router.post("/", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.create);
 router.get("/", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findAll);
 router.get("/control/:controlId", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findControlIdAll);
-router.get("/machine-answer/:machineAnswerId", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findByMachineAnswerId);
+router.get("/answer/:answerId", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findByAnswerId);
 router.get("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findById);
 router.put("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.update);
 router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER"]), controller.delete);

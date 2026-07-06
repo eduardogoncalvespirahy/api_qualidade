@@ -25,7 +25,7 @@ const cacheKeys = {
 const SELECT_COLUMNS = `
   id,
   machine_id as "machineId",
-  machine_answer_id as "machineAnswerId",
+  answer_id as "answerId",
   control_id as "controlId",
   resposta,
   limits_answer_id as "limitAnswerId",
@@ -46,7 +46,7 @@ export class MachineAnswerResultRepository {
       INSERT INTO teste.machine_answer_result
       (
         machine_id,
-        machine_answer_id,
+        answer_id,
         control_id,
         resposta,
         limits_answer_id,
@@ -63,7 +63,7 @@ export class MachineAnswerResultRepository {
       `,
       [
         dto.machineId,
-        dto.machineAnswerId,
+        dto.answerId,
         dto.controlId,
         dto.resposta,
         dto.limitsAnswerId ?? null,
@@ -114,17 +114,15 @@ export class MachineAnswerResultRepository {
     return machineAnswerResult;
   }
 
-  async findByMachineAnswerId(
-    machineAnswerId: string,
-  ): Promise<MachineAnswerResult[]> {
+  async findByAnswerId(answerId: string): Promise<MachineAnswerResult[]> {
     const result = await pool.query<MachineAnswerResult>(
       `
       SELECT ${SELECT_COLUMNS}
       FROM teste.machine_answer_result
-      WHERE machine_answer_id = $1
+      WHERE answer_id = $1
       ORDER BY DATA_CRIACAO DESC LIMIT 1
       `,
-      [machineAnswerId],
+      [answerId],
     );
 
     return result.rows;
@@ -237,7 +235,7 @@ export class MachineAnswerResultRepository {
         FROM teste.machine_answer_result
         WHERE control_id = $1
         `,
-        [controlId]
+        [controlId],
       ),
     ]);
 
@@ -265,7 +263,7 @@ export class MachineAnswerResultRepository {
       UPDATE teste.machine_answer_result
       SET
         machineid = COALESCE($2, machine_id),
-        machine_answer_id = COALESCE($3, machine_answer_id),
+        answer_id = COALESCE($3, answer_id),
         control_id = COALESCE($4, control_id),
         resposta = COALESCE($5, resposta),
         limits_answer_id = COALESCE($6, limits_answer_id)
@@ -275,7 +273,7 @@ export class MachineAnswerResultRepository {
       [
         id,
         dto.machineId ?? null,
-        dto.machineAnswerId ?? null,
+        dto.answerId ?? null,
         dto.controlId ?? null,
         dto.resposta,
         dto.limitsAnswerId ?? null,

@@ -45,7 +45,11 @@ export class MachineAnswerResultController {
       const page = Number(req.query.page) || undefined;
       const limit = Number(req.query.limit) || undefined;
 
-      const result = await this.service.findControlIdAll(controlId, page, limit);
+      const result = await this.service.findControlIdAll(
+        controlId,
+        page,
+        limit,
+      );
 
       return res.status(200).json(result);
     } catch (error) {
@@ -73,14 +77,11 @@ export class MachineAnswerResultController {
     }
   };
 
-  findByMachineAnswerId = async (
-    req: Request,
-    res: Response,
-  ): Promise<Response> => {
+  findByAnswerId = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const machineAnswerId = req.params.machineAnswerId as string;
+      const answerId = req.params.answerId as string;
 
-      const items = await this.service.findByMachineAnswerId(machineAnswerId);
+      const items = await this.service.findByAnswerId(answerId);
 
       return res.status(200).json(items);
     } catch (error) {

@@ -16,8 +16,8 @@ export class MachineAnswerResultService {
   async create(
     dto: CreateMachineAnswerResultDTO,
   ): Promise<MachineAnswerResult> {
-    if (!dto.machineAnswerId) {
-      throw new Error("O campo 'machineAnswerId' é obrigatório");
+    if (!dto.answerId) {
+      throw new Error("O campo 'answerId' é obrigatório");
     }
 
     return this.repository.create(dto);
@@ -36,7 +36,7 @@ export class MachineAnswerResultService {
     limit?: number,
   ): Promise<PaginatedResult<MachineAnswerResult>> {
     return this.repository.findControlIdAll(controlId, page, limit);
-  }  
+  }
 
   async findById(id: string): Promise<MachineAnswerResult> {
     const item = await this.repository.findById(id);
@@ -48,10 +48,18 @@ export class MachineAnswerResultService {
     return item;
   }
 
-  async findByMachineAnswerId(
-    machineAnswerId: string,
-  ): Promise<MachineAnswerResult[]> {
-    return this.repository.findByMachineAnswerId(machineAnswerId);
+  async findByAnswerId(answerId: string): Promise<MachineAnswerResult[]> {
+    if (!answerId) {
+      throw new Error("O campo 'answerId' é obrigatório");
+    }
+
+    const item = this.repository.findByAnswerId(answerId);
+
+    if (!item) {
+      throw new Error("MachineAnswerResult não encontrado");
+    }
+
+    return item;
   }
 
   async update(
@@ -60,8 +68,8 @@ export class MachineAnswerResultService {
   ): Promise<MachineAnswerResult> {
     await this.findById(id);
 
-    if (!dto.machineAnswerId) {
-      throw new Error("O campo 'machineAnswerId' é obrigatório");
+    if (!id) {
+      throw new Error("O campo 'id' MachineAnswerResult é obrigatório");
     }
 
     const updated = await this.repository.update(id, dto);

@@ -1,7 +1,7 @@
 export interface MachineAnswerResult {
   id: string,
   machineId: string;
-  machineAnswerId: string;
+  answerId: string;
   controlId: string;
   resposta: string;
   limitsAnswerId: string | null;
@@ -11,7 +11,7 @@ export interface MachineAnswerResult {
 
 export interface CreateMachineAnswerResultDTO {
   machineId: string;
-  machineAnswerId: string;
+  answerId: string;
   controlId: string;
   resposta: string;
   limitsAnswerId?: string | null;
@@ -21,7 +21,7 @@ export interface CreateMachineAnswerResultDTO {
 
 export interface UpdateMachineAnswerResultDTO {
   machineId: string;
-  machineAnswerId: string;
+  answerId: string;
   controlId: string;
   resposta: string;
   limitsAnswerId?: string | null;
