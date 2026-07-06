@@ -37,6 +37,23 @@ export class AnswerResultController {
     }
   };
 
+  findControlIdAll = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const controlId = req.params.controlId as string;
+      const page = Number(req.query.page) || undefined;
+      const limit = Number(req.query.limit) || undefined;
+
+      const result = await this.service.findControlIdAll(controlId, page, limit);
+
+      return res.status(200).json(result);
+    } catch (error) {
+      return res.status(500).json({
+        message:
+          error instanceof Error ? error.message : "Erro ao listar registros",
+      });
+    }
+  };  
+
   findById = async (req: Request, res: Response): Promise<Response> => {
     try {
       const id = req.params.id as string;

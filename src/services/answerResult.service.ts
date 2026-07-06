@@ -35,6 +35,14 @@ export class AnswerResultService {
     return this.repository.findAll(page, limit);
   }
 
+  async findControlIdAll(
+    controlId: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<AnswerResult>> {
+    return this.repository.findControlIdAll(controlId, page, limit);
+  }
+
   async findById(id: string): Promise<AnswerResult> {
     const item = await this.repository.findById(id);
 

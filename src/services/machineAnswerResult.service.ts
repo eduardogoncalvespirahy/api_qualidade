@@ -30,6 +30,14 @@ export class MachineAnswerResultService {
     return this.repository.findAll(page, limit);
   }
 
+  async findControlIdAll(
+    controlId: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<MachineAnswerResult>> {
+    return this.repository.findControlIdAll(controlId, page, limit);
+  }  
+
   async findById(id: string): Promise<MachineAnswerResult> {
     const item = await this.repository.findById(id);
 

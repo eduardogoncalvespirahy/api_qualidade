@@ -172,6 +172,70 @@ export class AnswerResultRepository {
     return response;
   }
 
+  async findControlIdAll(
+    controlId: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<AnswerResult>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
+
+    const cacheKey = isPaginated
+      ? cacheKeys.paginated(page, limit)
+      : cacheKeys.all();
+
+    const cached = await cache.get<PaginatedResult<AnswerResult>>(cacheKey);
+
+    if (cached) {
+      console.log("Cache HIT:", cacheKey);
+      return cached;
+    }
+
+    let query = `
+      SELECT ${SELECT_COLUMNS}
+      FROM teste.answer_result
+      WHERE control_id = $1
+      ORDER BY id DESC
+    `;
+
+    const params: unknown[] = [controlId];
+
+    if (isPaginated) {
+      query += `
+        LIMIT $1
+        OFFSET $2
+      `;
+
+      params.push(limit, (page - 1) * limit);
+    }
+
+    const [rowsResult, countResult] = await Promise.all([
+      pool.query<AnswerResult>(query, params),
+      pool.query<{ total: string }>(
+        `
+        SELECT COUNT(*) AS total
+        FROM teste.answer_result
+        WHERE control_id = $1
+        `,
+        [controlId]
+      ),
+    ]);
+
+    const total = Number(countResult.rows[0].total);
+
+    const response: PaginatedResult<AnswerResult> = {
+      data: rowsResult.rows,
+      total,
+      page: isPaginated ? page : null,
+      limit: isPaginated ? limit : null,
+      totalPages: isPaginated ? Math.ceil(total / limit) : null,
+    };
+
+    await cache.set(cacheKey, response, CACHE_TTL);
+
+    return response;
+  }
+
   async delete(id: string): Promise<AnswerResult | null> {
     const answerResult = await this.findById(id);
 
