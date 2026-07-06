@@ -49,7 +49,7 @@ export class MachineAnswerResultRepository {
         answer_id,
         control_id,
         resposta,
-        limits_answer_id,
+        limits_answer_id
       )
       VALUES
       (
