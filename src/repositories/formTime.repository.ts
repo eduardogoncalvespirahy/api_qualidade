@@ -39,7 +39,7 @@ export class FormTimeRepository {
   async create(dto: CreateFormTimeDTO): Promise<FormTime> {
     const result = await pool.query<FormTime>(
       `
-      INSERT INTO teste.forms
+      INSERT INTO teste.form_time
       (
         form_id,
         tempo_execucao,
@@ -51,7 +51,7 @@ export class FormTimeRepository {
         $1,
         $2,
         $3,
-        COALESCE($4, 1)
+        $4
       )
       RETURNING ${SELECT_COLUMNS}
       `,
