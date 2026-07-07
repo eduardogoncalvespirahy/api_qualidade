@@ -76,6 +76,17 @@ export class UserService {
     return user;
   }
 
+  async findInspetorProfileByRegisterNumber(
+    registerNumber: number,
+  ): Promise<UserProfile> {
+    const user =
+      await this.repository.findInspetorProfileByRegisterNumber(registerNumber);
+    if (!user) {
+      throw new Error("Usuário não encontrado");
+    }
+    return user;
+  }
+
   async update(id: string, dto: UpdateUserDTO): Promise<User> {
     await this.findById(id);
     const updated = await this.repository.update(id, dto);

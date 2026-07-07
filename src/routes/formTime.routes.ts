@@ -8,8 +8,8 @@ const controller = new FormTimeController();
 
 router.post("/", authMiddleware, roleMiddleware(["ADMIN", "LIDER"]), controller.create);
 router.get("/", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findAll);
-router.get("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findById);
-router.put("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER"]), controller.update);
-router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER"]), controller.delete);
+router.get("/:formId", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findByformId);
+router.put("/:formId", authMiddleware, roleMiddleware(["ADMIN", "LIDER"]), controller.update);
+router.delete("/:formId", authMiddleware, roleMiddleware(["ADMIN", "LIDER"]), controller.delete);
 
 export default router;

@@ -67,7 +67,7 @@ router.use("/controls", controlRoutes);
 router.use("/limits-answers", limitAnswerRoutes);
 router.use("/machine-answers", machineAnswerRoutes);
 router.use("/machine-answer-result", machineAnswerResultRoutes);
-router.use("/form-times", formTimeRoutes);
+router.use("/form-time", formTimeRoutes);
 
 router.use("/credentials", credentialRoutes);
 router.use("/credentials-roles", credentialRoleRoutes);

@@ -484,6 +484,70 @@ export class UserRepository {
     return response;
   }
 
+  async findInspetorProfileByRegisterNumber(
+    registerNumber: string | number,
+  ): Promise<UserProfile | null> {
+    const cacheKey = `users_profile:inspetor:register:${registerNumber}`;
+
+    const cached = await cache.get<UserProfile>(cacheKey);
+    if (cached) return cached;
+
+    const result = await pool.query<UserProfile>(
+      `
+    SELECT U.ID AS "userId",
+           U.USERNAME AS "userUsername",
+           U.EMAIL AS "userEmail",
+           U.STATUS AS "userStatus",
+           EE.ID AS "employeeId",
+           EE.PERSON_NAME AS "employeeNome",
+           EE.REGISTER_NUMBER AS "employeeMatricula",
+           EE.HIRE_DATE AS "employeeDataAdmissao",
+           ER.ID AS "employerId",
+           LO.ID AS "locationId",
+           LO.NOME AS "locationName",
+           DE.ID AS "departmentId",
+           DE.NAME AS "departmentNome",
+           JO.ID AS "jobPositionId",
+           JO.NAME AS "jobPositionNome",
+           WG.ID AS "workstationGroupId",
+           WG.NAME AS "workstationGroupNome",
+           WS.ID AS "workshiftId",
+           WS.DESCRIPTION AS "workshiftDescricao",
+           CC.ID AS "costCenterId",
+           CC.NAME AS "costCenterNome",
+           EE.SYNCED_AT AS "ultimaSincronizacao"
+      FROM TESTE.USERS U
+      JOIN TESTE.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
+      JOIN TESTE.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
+      JOIN TESTE.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
+      JOIN TESTE.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
+      JOIN TESTE.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
+      JOIN TESTE.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
+      JOIN TESTE.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
+      JOIN TESTE.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
+     WHERE U.STATUS = 1
+       AND EE.REGISTER_NUMBER = $1
+       AND EXISTS (
+         SELECT 1
+         FROM TESTE.CREDENTIALS C
+         JOIN TESTE.CREDENTIALS_ROLES CR ON CR.CREDENTIAL_ID = C.ID
+         JOIN TESTE.ROLES R ON R.ID = CR.ROLE_ID
+         WHERE C.USER_ID = U.ID
+           AND C.STATUS = 1
+           AND UPPER(R.NOME) = 'INSPETOR'
+       )
+     LIMIT 1
+    `,
+      [registerNumber],
+    );
+
+    const profile = result.rows[0];
+    if (!profile) return null;
+
+    await cache.set(cacheKey, profile, CACHE_TTL);
+    return profile;
+  }
+
   async update(id: string, dto: UpdateUserDTO): Promise<User | null> {
     const current = await this.findById(id);
 

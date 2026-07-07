@@ -180,6 +180,32 @@
         }
       }
     },
+    "/users/inspetor/registerNumber/{registerNumber}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "registerNumber",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
     "/users/registerNumber/{registerNumber}": {
       "get": {
         "description": "",
@@ -2390,7 +2416,7 @@
         }
       }
     },
-    "/form-times/": {
+    "/form-time/": {
       "post": {
         "description": "",
         "parameters": [
@@ -2428,12 +2454,12 @@
         }
       }
     },
-    "/form-times/{id}": {
+    "/form-time/{formId}": {
       "get": {
         "description": "",
         "parameters": [
           {
-            "name": "id",
+            "name": "formId",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2457,7 +2483,7 @@
         "description": "",
         "parameters": [
           {
-            "name": "id",
+            "name": "formId",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2481,7 +2507,7 @@
         "description": "",
         "parameters": [
           {
-            "name": "id",
+            "name": "formId",
             "in": "path",
             "required": true,
             "type": "string"

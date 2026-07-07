@@ -109,6 +109,34 @@ export class UserController {
     }
   };
 
+  findInspetorProfileByRegisterNumber = async (
+    req: Request,
+    res: Response,
+  ): Promise<Response> => {
+    try {
+      const rawRegisterNumber = req.params.registerNumber;
+
+      if (Array.isArray(rawRegisterNumber)) {
+        return res.status(400).json({ message: "Número de registro inválido" });
+      }
+
+      const registerNumber = Number(rawRegisterNumber);
+
+      if (!Number.isInteger(registerNumber)) {
+        return res.status(400).json({ message: "Número de registro inválido" });
+      }
+
+      const user =
+        await this.service.findInspetorProfileByRegisterNumber(registerNumber);
+      return res.status(200).json(user);
+    } catch (error) {
+      return res.status(404).json({
+        message:
+          error instanceof Error ? error.message : "Usuário não encontrado",
+      });
+    }
+  };
+
   update = async (req: Request, res: Response): Promise<Response> => {
     try {
       const id = req.params.id as string;

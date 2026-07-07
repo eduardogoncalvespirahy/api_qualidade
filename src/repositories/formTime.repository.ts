@@ -12,19 +12,23 @@ const cache = new RedisRepository();
 const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 const cacheKeys = {
-  byId: (id: string) => `formstime:${id}`,
-  all: () => "formstime:all",
-  paginated: (page: number, limit: number) => `formstime:page:${page}:limit:${limit}`,
-  listPattern: () => "formstime:*",
+  byformId: (formId: string) => `form_time:${formId}`,
+
+  all: () => "form_time:all",
+
+  paginated: (page: number, limit: number) =>
+    `form_time:page:${page}:limit:${limit}`,
+
+  listPattern: () => "form_time:*",
 };
 
-// sem vírgula no final, e com id para o cache funcionar
 const SELECT_COLUMNS = `
-  id,
   form_id as "formId",
-  tempo_execucao as "tempoExecucao",
-  tempo_tolerencia as "tempoTolerancia",
-  tempo_antecedencia as "tempoAntecependem"
+  tempo_execucao as tempoExecucao,
+  tempo_tolerancia as tempoTolerancia,
+  tempo_antecedencia as tempoAntecedencia,
+  data_criacao as "dataCriacao",
+  data_alteracao as "dataAlteracao"
 `;
 
 export class FormTimeRepository {
@@ -35,38 +39,45 @@ export class FormTimeRepository {
   async create(dto: CreateFormTimeDTO): Promise<FormTime> {
     const result = await pool.query<FormTime>(
       `
-      INSERT INTO teste.form_time
+      INSERT INTO teste.forms
       (
         form_id,
         tempo_execucao,
-        tempo_tolerencia,
+        tempo_tolerancia,
         tempo_antecedencia
       )
-      VALUES ($1, $2, $3, $4)
+      VALUES
+      (
+        $1,
+        $2,
+        $3,
+        COALESCE($4, 1)
+      )
       RETURNING ${SELECT_COLUMNS}
       `,
       [
-        dto.formId ?? null,
+        dto.formId,
         dto.tempoExecucao,
         dto.tempoTolerancia ?? null,
-        dto.tempoAntecependem ?? null,
+        dto.tempoAntecedencia ?? null,
       ],
     );
 
-    const form = result.rows[0];
+    const formTime = result.rows[0];
 
     await Promise.all([
-      cache.set(cacheKeys.byId((form as any).id), form, CACHE_TTL),
+      cache.set(cacheKeys.byformId(formTime.formId), formTime, CACHE_TTL),
       this.invalidateListCache(),
     ]);
 
-    return form;
+    return formTime;
   }
 
-  async findById(id: string): Promise<FormTime | null> {
-    const cacheKey = cacheKeys.byId(id);
+  async findByformId(formId: string): Promise<FormTime | null> {
+    const cacheKey = cacheKeys.byformId(formId);
 
     const cached = await cache.get<FormTime>(cacheKey);
+
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
@@ -76,26 +87,35 @@ export class FormTimeRepository {
       `
       SELECT ${SELECT_COLUMNS}
       FROM teste.form_time
-      WHERE id = $1
+      WHERE form_id = $1
       `,
-      [id],
+      [formId],
     );
 
-    const form = result.rows[0];
-    if (!form) return null;
+    const formTime = result.rows[0];
 
-    await cache.set(cacheKey, form, CACHE_TTL);
-    return form;
+    if (!formTime) {
+      return null;
+    }
+
+    await cache.set(cacheKey, formTime, CACHE_TTL);
+
+    return formTime;
   }
 
-  async findAll(page?: number, limit?: number): Promise<PaginatedResult<FormTime>> {
-    const isPaginated = page !== undefined && limit !== undefined && page > 0 && limit > 0;
+  async findAll(
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<FormTime>> {
+    const isPaginated =
+      page !== undefined && limit !== undefined && page > 0 && limit > 0;
 
     const cacheKey = isPaginated
       ? cacheKeys.paginated(page, limit)
       : cacheKeys.all();
 
     const cached = await cache.get<PaginatedResult<FormTime>>(cacheKey);
+
     if (cached) {
       console.log("Cache HIT:", cacheKey);
       return cached;
@@ -104,19 +124,28 @@ export class FormTimeRepository {
     let query = `
       SELECT ${SELECT_COLUMNS}
       FROM teste.form_time
-      ORDER BY form_id DESC
+      ORDER BY data_criacao DESC
     `;
 
     const params: unknown[] = [];
 
     if (isPaginated) {
-      query += ` LIMIT $1 OFFSET $2`;
+      query += `
+        LIMIT $1
+        OFFSET $2
+      `;
+
       params.push(limit, (page - 1) * limit);
     }
 
     const [rowsResult, countResult] = await Promise.all([
       pool.query<FormTime>(query, params),
-      pool.query<{ total: string }>(`SELECT COUNT(*) AS total FROM teste.form_time`),
+      pool.query<{ total: string }>(
+        `
+        SELECT COUNT(*) AS total
+        FROM teste.form_time
+        `,
+      ),
     ]);
 
     const total = Number(countResult.rows[0].total);
@@ -130,52 +159,67 @@ export class FormTimeRepository {
     };
 
     await cache.set(cacheKey, response, CACHE_TTL);
+
     return response;
   }
 
-  async update(id: string, dto: UpdateFormTimeDTO): Promise<FormTime | null> {
+  async update(
+    formId: string,
+    dto: UpdateFormTimeDTO,
+  ): Promise<FormTime | null> {
     const result = await pool.query<FormTime>(
       `
       UPDATE teste.form_time
       SET
-        form_id            = COALESCE($2, form_id),
-        tempo_execucao     = COALESCE($3, tempo_execucao),
-        tempo_tolerencia   = COALESCE($4, tempo_tolerencia),
-        tempo_antecedencia = COALESCE($5, tempo_antecedencia)
-      WHERE id = $1
+        tempo_execucao = COALESCE($2, tempo_execucao),
+        tempo_tolerancia = COALESCE($3, tempo_tolerancia),
+        tempo_antecedencia = COALESCE($4, tempo_antecedencia),
+        data_alteracao = CURRENT_TIMESTAMP
+      WHERE form_id = $1
       RETURNING ${SELECT_COLUMNS}
       `,
       [
-        id,
-        dto.formId ?? null,
+        formId,
         dto.tempoExecucao ?? null,
         dto.tempoTolerancia ?? null,
-        dto.tempoAntecependem ?? null,
+        dto.tempoAntecedencia ?? null,
       ],
     );
 
-    const form = result.rows[0];
-    if (!form) return null;
+    const formTime = result.rows[0];
+
+    if (!formTime) {
+      return null;
+    }
 
     await Promise.all([
-      cache.set(cacheKeys.byId(id), form, CACHE_TTL),
+      cache.set(cacheKeys.byformId(formId), formTime, CACHE_TTL),
       this.invalidateListCache(),
     ]);
 
-    return form;
+    return formTime;
   }
 
-  async delete(id: string): Promise<FormTime | null> {
-    const form = await this.findById(id);
-    if (!form) return null;
+  async delete(formId: string): Promise<FormTime | null> {
+    const formTime = await this.findByformId(formId);
 
-    await pool.query(`DELETE FROM teste.form_time WHERE id = $1`, [id]);
+    if (!formTime) {
+      return null;
+    }
+
+    await pool.query(
+      `
+      DELETE FROM teste.form_time
+      WHERE form_id = $1
+      `,
+      [formId],
+    );
 
     await Promise.all([
-      cache.delete(cacheKeys.byId(id)),
+      cache.delete(cacheKeys.byformId(formId)),
       this.invalidateListCache(),
     ]);
 
-    return form;
+    return formTime;
   }
 }

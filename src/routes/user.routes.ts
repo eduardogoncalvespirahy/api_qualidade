@@ -11,6 +11,7 @@ router.get("/", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), 
 router.get("/profiles", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findAllUserProfile);
 router.get("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findById);
 router.get("/profile/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findByIdUserProfile);
+router.get("/inspetor/registerNumber/:registerNumber", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findInspetorProfileByRegisterNumber);
 router.get("/registerNumber/:registerNumber", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findByRegisterNumber);
 router.put("/:id", authMiddleware, roleMiddleware(["ADMIN"]), controller.update);
 router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN"]), controller.delete);

@@ -21,12 +21,15 @@ export class FormTimeService {
     return this.repository.create(dto);
   }
 
-  async findAll(page?: number, limit?: number): Promise<PaginatedResult<FormTime>> {
+  async findAll(
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<FormTime>> {
     return this.repository.findAll(page, limit);
   }
 
-  async findById(id: string): Promise<FormTime> {
-    const item = await this.repository.findById(id);
+  async findByformId(formId: string): Promise<FormTime> {
+    const item = await this.repository.findByformId(formId);
 
     if (!item) {
       throw new Error("FormTime não encontrado");
@@ -35,10 +38,10 @@ export class FormTimeService {
     return item;
   }
 
-  async update(id: string, dto: UpdateFormTimeDTO): Promise<FormTime> {
-    await this.findById(id);
+  async update(formId: string, dto: UpdateFormTimeDTO): Promise<FormTime> {
+    await this.findByformId(formId);
 
-    const updated = await this.repository.update(id, dto);
+    const updated = await this.repository.update(formId, dto);
 
     if (!updated) {
       throw new Error("Erro ao atualizar FormTime");
@@ -47,8 +50,8 @@ export class FormTimeService {
     return updated;
   }
 
-  async delete(id: string): Promise<void> {
-    const deleted = await this.repository.delete(id);
+  async delete(formId: string): Promise<void> {
+    const deleted = await this.repository.delete(formId);
 
     if (!deleted) {
       throw new Error("FormTime não encontrado");
