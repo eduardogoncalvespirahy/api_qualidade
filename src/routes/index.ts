@@ -22,6 +22,7 @@ import controlRoutes from "./control.routes";
 import limitAnswerRoutes from "./limitAnswer.routes";
 import machineAnswerRoutes from "./machineAnswer.routes";
 import machineAnswerResultRoutes from "./machineAnswerResult.routes";
+import formTimeRoutes from "./formTime.routes";
 
 // Autenticação / autorização
 import credentialRoutes from "./credential.routes";
@@ -66,6 +67,7 @@ router.use("/controls", controlRoutes);
 router.use("/limits-answers", limitAnswerRoutes);
 router.use("/machine-answers", machineAnswerRoutes);
 router.use("/machine-answer-result", machineAnswerResultRoutes);
+router.use("/form-times", formTimeRoutes);
 
 router.use("/credentials", credentialRoutes);
 router.use("/credentials-roles", credentialRoleRoutes);
