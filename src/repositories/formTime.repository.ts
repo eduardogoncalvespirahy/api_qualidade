@@ -23,12 +23,12 @@ const cacheKeys = {
 };
 
 const SELECT_COLUMNS = `
-  form_id as "formId",
-  tempo_execucao as tempoExecucao,
-  tempo_tolerancia as tempoTolerancia,
-  tempo_antecedencia as tempoAntecedencia,
-  data_criacao as "dataCriacao",
-  data_alteracao as "dataAlteracao"
+  form_id            AS "formId",
+  tempo_execucao     AS "tempoExecucao",
+  tempo_tolerancia   AS "tempoTolerancia",
+  tempo_antecedencia AS "tempoAntecedencia",
+  data_criacao       AS "dataCriacao",
+  data_alteracao     AS "dataAlteracao"
 `;
 
 export class FormTimeRepository {
