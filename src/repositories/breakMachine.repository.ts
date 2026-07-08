@@ -62,8 +62,8 @@ export class BreakMachineRepository {
       [
         dto.machineId,
         dto.horaInicio,
-        dto.horaFim,
-        dto.motivo ?? null,
+        dto.horaFim ?? null,
+        dto.motivo,
         dto.status ?? null,
       ],
     );
