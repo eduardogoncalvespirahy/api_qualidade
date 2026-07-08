@@ -22,10 +22,6 @@ export class BreakFormService {
       throw new Error("O campo 'horaInicio' é obrigatório");
     }
 
-    if (!dto.horaFim) {
-      throw new Error("O campo 'horaFim' é obrigatório");
-    }
-
     return this.repository.create(dto);
   }
 

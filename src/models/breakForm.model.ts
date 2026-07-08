@@ -20,7 +20,7 @@ export interface CreateBreakFormDTO {
 export interface UpdateBreakFormDTO {
   formId?: string;
   horaInicio?: Date;
-  horaFim?: Date;  
+  horaFim?: Date | null;  
   motivo?: string;
   status?: number;
 }
