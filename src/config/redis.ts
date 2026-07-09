@@ -13,7 +13,7 @@ export class RedisConnection {
     }
 
     this.client = createClient({
-      url: process.env.REDIS_URL,
+      url: process.env.REDIS_URI,
     });
 
     this.client.on("error", (err) => {
