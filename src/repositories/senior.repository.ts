@@ -119,12 +119,6 @@ export class SeniorRepository {
       },
     );
 
-    // const item =
-    //   (data.contents ?? data.entities ?? data.values ?? [])[0] ?? null;
-    // if (!item) {
-    //   return null;
-    // }
-
     return data;
   }
 
