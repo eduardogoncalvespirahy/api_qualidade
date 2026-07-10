@@ -6,6 +6,12 @@ import {
   UpdateJobPositionDTO,
 } from "../models/jobPosition.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -35,7 +41,7 @@ export class JobPositionRepository {
   async create(dto: CreateJobPositionDTO): Promise<JobPosition> {
     const result = await pool.query<JobPosition>(
       `
-      INSERT INTO teste.job_positions
+      INSERT INTO ${SCHEMA_UNICO}.job_positions
       (
         id,
         name
@@ -76,7 +82,7 @@ export class JobPositionRepository {
     const result = await pool.query<JobPosition>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.job_positions
+      FROM ${SCHEMA_UNICO}.job_positions
       WHERE id = $1
       `,
       [id],
@@ -113,7 +119,7 @@ export class JobPositionRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.job_positions
+      FROM ${SCHEMA_UNICO}.job_positions
       ORDER BY id ASC
     `;
 
@@ -133,7 +139,7 @@ export class JobPositionRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.job_positions
+        FROM ${SCHEMA_UNICO}.job_positions
         `,
       ),
     ]);
@@ -159,7 +165,7 @@ export class JobPositionRepository {
   ): Promise<JobPosition | null> {
     const result = await pool.query<JobPosition>(
       `
-      UPDATE teste.job_positions
+      UPDATE ${SCHEMA_UNICO}.job_positions
       SET
         name = COALESCE($2, name)
       WHERE id = $1
@@ -191,7 +197,7 @@ export class JobPositionRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.job_positions
+      DELETE FROM ${SCHEMA_UNICO}.job_positions
       WHERE id = $1
       `,
       [id],

@@ -6,6 +6,12 @@ import {
   UpdateControlDTO,
 } from "../models/control.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -41,7 +47,7 @@ export class ControlRepository {
   async create(dto: CreateControlDTO): Promise<Control> {
     const result = await pool.query<Control>(
       `
-      INSERT INTO teste.controls
+      INSERT INTO ${SCHEMA_QUALIDADE}.controls
       (
         form_id,
         user_id,
@@ -85,7 +91,7 @@ export class ControlRepository {
     const result = await pool.query<Control>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.controls
+      FROM ${SCHEMA_QUALIDADE}.controls
       WHERE id = $1
       `,
       [id],
@@ -106,7 +112,7 @@ export class ControlRepository {
     const result = await pool.query<Control>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.controls
+      FROM ${SCHEMA_QUALIDADE}.controls
       WHERE form_id = $1
       ORDER BY data_criacao DESC
       LIMIT 1
@@ -121,7 +127,7 @@ export class ControlRepository {
     const result = await pool.query<Control>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.controls
+      FROM ${SCHEMA_QUALIDADE}.controls
       WHERE user_id = $1
       ORDER BY data_criacao DESC
       `,
@@ -151,7 +157,7 @@ export class ControlRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.controls
+      FROM ${SCHEMA_QUALIDADE}.controls
       ORDER BY data_criacao DESC
     `;
 
@@ -171,7 +177,7 @@ export class ControlRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.controls
+        FROM ${SCHEMA_QUALIDADE}.controls
         `,
       ),
     ]);
@@ -194,7 +200,7 @@ export class ControlRepository {
   async update(id: string, dto: UpdateControlDTO): Promise<Control | null> {
     const result = await pool.query<Control>(
       `
-      UPDATE teste.controls
+      UPDATE ${SCHEMA_QUALIDADE}.controls
       SET
         form_id = COALESCE($2, form_id),
         user_id = COALESCE($3, user_id),
@@ -238,7 +244,7 @@ export class ControlRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.controls
+      DELETE FROM ${SCHEMA_QUALIDADE}.controls
       WHERE id = $1
       `, 
       

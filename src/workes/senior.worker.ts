@@ -18,7 +18,9 @@ export class SeniorSyncWorker {
     void this.execute();
 
     // a cada 5 minutos
-    this.task = cron.schedule(TIME_CRON, () => this.execute());
+    this.task = cron.schedule(TIME_CRON, () => this.execute(), {
+      timezone: "America/Sao_Paulo",
+    });
 
     // node-cron v4: se o tick for "perdido" (event loop ocupado naquele
     // instante), o agendamento pode ser pulado. Aqui reexecutamos assim

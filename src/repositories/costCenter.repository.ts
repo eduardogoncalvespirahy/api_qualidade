@@ -6,6 +6,12 @@ import {
   UpdateCostCenterDTO,
 } from "../models/costCenter.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -35,7 +41,7 @@ export class CostCenterRepository {
   async create(dto: CreateCostCenterDTO): Promise<CostCenter> {
     const result = await pool.query<CostCenter>(
       `
-      INSERT INTO teste.cost_centers
+      INSERT INTO ${SCHEMA_UNICO}.cost_centers
       (
         id,
         name
@@ -76,7 +82,7 @@ export class CostCenterRepository {
     const result = await pool.query<CostCenter>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.cost_centers
+      FROM ${SCHEMA_UNICO}.cost_centers
       WHERE id = $1
       `,
       [id],
@@ -113,7 +119,7 @@ export class CostCenterRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.cost_centers
+      FROM ${SCHEMA_UNICO}.cost_centers
       ORDER BY id ASC
     `;
 
@@ -133,7 +139,7 @@ export class CostCenterRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.cost_centers
+        FROM ${SCHEMA_UNICO}.cost_centers
         `,
       ),
     ]);
@@ -159,7 +165,7 @@ export class CostCenterRepository {
   ): Promise<CostCenter | null> {
     const result = await pool.query<CostCenter>(
       `
-      UPDATE teste.cost_centers
+      UPDATE ${SCHEMA_UNICO}.cost_centers
       SET
         name = COALESCE($2, name)
       WHERE id = $1
@@ -191,7 +197,7 @@ export class CostCenterRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.cost_centers
+      DELETE FROM ${SCHEMA_UNICO}.cost_centers
       WHERE id = $1
       `,
       [id],

@@ -6,6 +6,12 @@ import {
   UpdateFileDTO,
 } from "../models/file.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -43,7 +49,7 @@ export class FileRepository {
   async create(dto: CreateFileDTO): Promise<File> {
     const result = await pool.query<File>(
       `
-      INSERT INTO teste.files
+      INSERT INTO ${SCHEMA_UNICO}.files
       (
         nome,
         nome_original,
@@ -90,7 +96,7 @@ export class FileRepository {
     }
 
     const result = await pool.query<File>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.files WHERE id = $1`,
+      `SELECT ${SELECT_COLUMNS} FROM ${SCHEMA_UNICO}.files WHERE id = $1`,
       [id],
     );
 
@@ -116,7 +122,7 @@ export class FileRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.files
+      FROM ${SCHEMA_UNICO}.files
       ORDER BY data_criacao DESC
     `;
 
@@ -129,7 +135,7 @@ export class FileRepository {
 
     const [rowsResult, countResult] = await Promise.all([
       pool.query<File>(query, params),
-      pool.query<{ total: string }>(`SELECT COUNT(*) AS total FROM teste.files`),
+      pool.query<{ total: string }>(`SELECT COUNT(*) AS total FROM ${SCHEMA_UNICO}.files`),
     ]);
 
     const total = Number(countResult.rows[0].total);
@@ -149,7 +155,7 @@ export class FileRepository {
   async update(id: string, dto: UpdateFileDTO): Promise<File | null> {
     const result = await pool.query<File>(
       `
-      UPDATE teste.files
+      UPDATE ${SCHEMA_UNICO}.files
       SET
         nome          = COALESCE($2, nome),
         nome_original = COALESCE($3, nome_original),
@@ -191,7 +197,7 @@ export class FileRepository {
     const file = await this.findById(id);
     if (!file) return null;
 
-    await pool.query(`DELETE FROM teste.files WHERE id = $1`, [id]);
+    await pool.query(`DELETE FROM ${SCHEMA_UNICO}.files WHERE id = $1`, [id]);
 
     await Promise.all([
       cache.delete(cacheKeys.byId(id)),

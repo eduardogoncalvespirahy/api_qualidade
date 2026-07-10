@@ -8,6 +8,12 @@ import {
 } from "../models/user.model";
 import { RedisRepository } from "./redis.repository";
 import { EmployeeRepository } from "./employee.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 const employee = new EmployeeRepository();
@@ -106,7 +112,7 @@ export class UserRepository {
   async create(dto: CreateUserDTO): Promise<User> {
     const result = await pool.query<User>(
       `
-      INSERT INTO teste.users
+      INSERT INTO ${SCHEMA_UNICO}.users
       (
         employee_id,
         username,
@@ -166,15 +172,15 @@ export class UserRepository {
              CC.ID AS "costCenterId",
              CC.NAME AS "costCenterNome",
              EE.SYNCED_AT AS "ultimaSincronizacao"
-        FROM TESTE.USERS U
-        JOIN TESTE.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
-        JOIN TESTE.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
-        JOIN TESTE.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
-        JOIN TESTE.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
-        JOIN TESTE.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
-        JOIN TESTE.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
-        JOIN TESTE.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
-        JOIN TESTE.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
+        FROM ${SCHEMA_UNICO}.USERS U
+        JOIN ${SCHEMA_UNICO}.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
        WHERE U.STATUS = 1 AND U.ID = $1
       `,
       [id],
@@ -210,7 +216,7 @@ export class UserRepository {
     const result = await pool.query<User>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.users
+      FROM ${SCHEMA_UNICO}.users
       WHERE id = $1
       `,
       [id],
@@ -240,7 +246,7 @@ export class UserRepository {
     const result = await pool.query<User>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.users
+      FROM ${SCHEMA_UNICO}.users
       WHERE username = $1
       `,
       [username],
@@ -270,7 +276,7 @@ export class UserRepository {
     const result = await pool.query<User>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.users
+      FROM ${SCHEMA_UNICO}.users
       WHERE email = $1
       `,
       [email],
@@ -309,8 +315,8 @@ export class UserRepository {
         u.status,
         u.data_criacao as "dataCriacao",
         u.data_alteracao as "dataAlteracao"
-      FROM teste.users u
-      INNER JOIN teste.employees e
+      FROM ${SCHEMA_UNICO}.users u
+      INNER JOIN ${SCHEMA_UNICO}.employees e
         ON e.id = u.employee_id
       WHERE e.register_number = $1
       LIMIT 1
@@ -346,7 +352,7 @@ export class UserRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.users
+      FROM ${SCHEMA_UNICO}.users
       ORDER BY data_criacao DESC
     `;
 
@@ -366,7 +372,7 @@ export class UserRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.users
+        FROM ${SCHEMA_UNICO}.users
         `,
       ),
     ]);
@@ -427,15 +433,15 @@ export class UserRepository {
              CC.ID AS "costCenterId",
              CC.NAME AS "costCenterNome",
              EE.SYNCED_AT AS "ultimaSincronizacao"
-        FROM TESTE.USERS U
-        JOIN TESTE.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
-        JOIN TESTE.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
-        JOIN TESTE.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
-        JOIN TESTE.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
-        JOIN TESTE.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
-        JOIN TESTE.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
-        JOIN TESTE.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
-        JOIN TESTE.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
+        FROM ${SCHEMA_UNICO}.USERS U
+        JOIN ${SCHEMA_UNICO}.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
+        JOIN ${SCHEMA_UNICO}.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
        WHERE U.STATUS = 1
     `;
 
@@ -455,15 +461,15 @@ export class UserRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-          FROM TESTE.USERS U
-          JOIN TESTE.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
-          JOIN TESTE.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
-          JOIN TESTE.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
-          JOIN TESTE.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
-          JOIN TESTE.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
-          JOIN TESTE.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
-          JOIN TESTE.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
-          JOIN TESTE.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
+          FROM ${SCHEMA_UNICO}.USERS U
+          JOIN ${SCHEMA_UNICO}.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
+          JOIN ${SCHEMA_UNICO}.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
+          JOIN ${SCHEMA_UNICO}.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
+          JOIN ${SCHEMA_UNICO}.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
+          JOIN ${SCHEMA_UNICO}.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
+          JOIN ${SCHEMA_UNICO}.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
+          JOIN ${SCHEMA_UNICO}.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
+          JOIN ${SCHEMA_UNICO}.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
          WHERE U.STATUS = 1
         `,
       ),
@@ -516,22 +522,22 @@ export class UserRepository {
            CC.ID AS "costCenterId",
            CC.NAME AS "costCenterNome",
            EE.SYNCED_AT AS "ultimaSincronizacao"
-      FROM TESTE.USERS U
-      JOIN TESTE.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
-      JOIN TESTE.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
-      JOIN TESTE.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
-      JOIN TESTE.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
-      JOIN TESTE.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
-      JOIN TESTE.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
-      JOIN TESTE.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
-      JOIN TESTE.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
+      FROM ${SCHEMA_UNICO}.USERS U
+      JOIN ${SCHEMA_UNICO}.EMPLOYEES EE ON EE.ID::TEXT = U.EMPLOYEE_ID::TEXT
+      JOIN ${SCHEMA_UNICO}.EMPLOYERS ER ON ER.ID::TEXT = EE.EMPLOYER_ID::TEXT
+      JOIN ${SCHEMA_UNICO}.LOCATIONS LO ON LO.EMPLOYER_ID::TEXT = EE.EMPLOYER_ID::TEXT
+      JOIN ${SCHEMA_UNICO}.DEPARTMENTS DE ON DE.ID::TEXT = EE.DEPARTMENT_ID::TEXT
+      JOIN ${SCHEMA_UNICO}.JOB_POSITIONS JO ON JO.ID::TEXT = EE.JOB_POSITION_ID::TEXT
+      JOIN ${SCHEMA_UNICO}.WORKSTATION_GROUPS WG ON WG.ID::TEXT = EE.WORKSTATION_GROUP_ID::TEXT
+      JOIN ${SCHEMA_UNICO}.WORKSHIFTS WS ON WS.ID::TEXT = EE.WORKSHIFT_ID::TEXT
+      JOIN ${SCHEMA_UNICO}.COST_CENTERS CC ON CC.ID::TEXT = EE.COST_CENTER_ID::TEXT
      WHERE U.STATUS = 1
        AND EE.REGISTER_NUMBER = $1
        AND EXISTS (
          SELECT 1
-         FROM TESTE.CREDENTIALS C
-         JOIN TESTE.CREDENTIALS_ROLES CR ON CR.CREDENTIAL_ID = C.ID
-         JOIN TESTE.ROLES R ON R.ID = CR.ROLE_ID
+         FROM ${SCHEMA_UNICO}.CREDENTIALS C
+         JOIN ${SCHEMA_UNICO}.CREDENTIALS_ROLES CR ON CR.CREDENTIAL_ID = C.ID
+         JOIN ${SCHEMA_UNICO}.ROLES R ON R.ID = CR.ROLE_ID
          WHERE C.USER_ID = U.ID
            AND C.STATUS = 1
            AND UPPER(R.NOME) = 'INSPETOR'
@@ -553,7 +559,7 @@ export class UserRepository {
 
     const result = await pool.query<User>(
       `
-      UPDATE teste.users
+      UPDATE ${SCHEMA_UNICO}.users
       SET
         employee_id = COALESCE($2, employee_id),
         username = COALESCE($3, username),
@@ -596,7 +602,7 @@ export class UserRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.users
+      DELETE FROM ${SCHEMA_UNICO}.users
       WHERE id = $1
       `,
       [id],

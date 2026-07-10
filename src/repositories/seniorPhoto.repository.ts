@@ -123,8 +123,6 @@ export class SeniorPhotoRepository {
     // passo 3 pode exigir token de usuário-colaborador (HCM legado)
     const userToken = process.env.SENIOR_HCM_USER_TOKEN ?? token;
 
-    console.log("token: ", userToken);
-
     try {
       const { data } = await axios.get(
         `${HCM_API}/attachment/${attachmentId}`,

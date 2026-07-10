@@ -6,6 +6,12 @@ import {
   UpdateAnswerGroupItemsDTO,
 } from "../models/answerGroupItems.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -42,7 +48,7 @@ export class AnswerGroupItemsRepository {
   async create(dto: CreateAnswerGroupItemsDTO): Promise<answerGroupItems> {
     const result = await pool.query<answerGroupItems>(
       `
-      INSERT INTO teste.answer_group_items
+      INSERT INTO ${SCHEMA_QUALIDADE}.answer_group_items
       (
         answer_group_id,
         answer_id,
@@ -102,7 +108,7 @@ export class AnswerGroupItemsRepository {
     const result = await pool.query<answerGroupItems>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answer_group_items
+      FROM ${SCHEMA_QUALIDADE}.answer_group_items
       WHERE answer_group_id = $1 AND answer_id = $2
       `,
       [answerGroupId, answerId],
@@ -132,7 +138,7 @@ export class AnswerGroupItemsRepository {
     const result = await pool.query<answerGroupItems>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answer_group_items
+      FROM ${SCHEMA_QUALIDADE}.answer_group_items
       WHERE answer_group_id = $1
       `,
       [id],
@@ -162,7 +168,7 @@ export class AnswerGroupItemsRepository {
     const result = await pool.query<answerGroupItems>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answer_group_items
+      FROM ${SCHEMA_QUALIDADE}.answer_group_items
       WHERE answer_id = $1
       `,
       [id],
@@ -199,7 +205,7 @@ export class AnswerGroupItemsRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answer_group_items
+      FROM ${SCHEMA_QUALIDADE}.answer_group_items
       ORDER BY answer_group_id ASC, answer_id ASC, ordem ASC
     `;
 
@@ -219,7 +225,7 @@ export class AnswerGroupItemsRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.answer_group_items
+        FROM ${SCHEMA_QUALIDADE}.answer_group_items
         `,
       ),
     ]);
@@ -246,7 +252,7 @@ export class AnswerGroupItemsRepository {
   ): Promise<answerGroupItems | null> {
     const result = await pool.query<answerGroupItems>(
       `
-      UPDATE teste.answer_group_items
+      UPDATE ${SCHEMA_QUALIDADE}.answer_group_items
       SET
         answer_group_id = COALESCE($3, answer_group_id),
         answer_id = COALESCE($4, answer_id),
@@ -293,7 +299,7 @@ export class AnswerGroupItemsRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.answer_group_items
+      DELETE FROM ${SCHEMA_QUALIDADE}.answer_group_items
       WHERE answer_group_id = $1 AND answer_id = $2
       `,
       [answerGroupId, answerId],

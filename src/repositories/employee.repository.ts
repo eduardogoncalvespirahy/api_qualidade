@@ -6,6 +6,12 @@ import {
   UpdateEmployeeDTO,
 } from "../models/employee.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -59,7 +65,7 @@ export class EmployeeRepository {
   async create(dto: CreateEmployeeDTO): Promise<Employee> {
     const result = await pool.query<Employee>(
       `
-      INSERT INTO teste.employees
+      INSERT INTO ${SCHEMA_UNICO}.employees
       (
         id,
         company_number,
@@ -150,7 +156,7 @@ export class EmployeeRepository {
     const result = await pool.query<Employee>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.employees
+      FROM ${SCHEMA_UNICO}.employees
       WHERE id = $1
       `,
       [id],
@@ -180,7 +186,7 @@ export class EmployeeRepository {
     const result = await pool.query<Employee>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.employees
+      FROM ${SCHEMA_UNICO}.employees
       WHERE register_number = $1
       `,
       [registerNumber],
@@ -217,7 +223,7 @@ export class EmployeeRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.employees
+      FROM ${SCHEMA_UNICO}.employees
       ORDER BY register_number ASC
     `;
 
@@ -237,7 +243,7 @@ export class EmployeeRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.employees
+        FROM ${SCHEMA_UNICO}.employees
         `,
       ),
     ]);
@@ -266,7 +272,7 @@ export class EmployeeRepository {
 
     const result = await pool.query<Employee>(
       `
-      UPDATE teste.employees
+      UPDATE ${SCHEMA_UNICO}.employees
       SET
         company_number = COALESCE($2, company_number),
         register_number = COALESCE($3, register_number),
@@ -337,7 +343,7 @@ export class EmployeeRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.employees
+      DELETE FROM ${SCHEMA_UNICO}.employees
       WHERE id = $1
       `,
       [id],

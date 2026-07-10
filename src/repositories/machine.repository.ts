@@ -6,6 +6,12 @@ import {
   UpdateMachineDTO,
 } from "../models/machine.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -40,7 +46,7 @@ export class MachineRepository {
   async create(dto: CreateMachineDTO): Promise<Machine> {
     const result = await pool.query<Machine>(
       `
-      INSERT INTO teste.machines
+      INSERT INTO ${SCHEMA_QUALIDADE}.machines
       (
         form_id,
         nome,
@@ -91,7 +97,7 @@ export class MachineRepository {
     const result = await pool.query<Machine>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.machines
+      FROM ${SCHEMA_QUALIDADE}.machines
       WHERE id = $1
       `,
       [id]
@@ -136,7 +142,7 @@ export class MachineRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.machines
+      FROM ${SCHEMA_QUALIDADE}.machines
       ORDER BY data_criacao DESC
     `;
 
@@ -159,7 +165,7 @@ export class MachineRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.machines
+        FROM ${SCHEMA_QUALIDADE}.machines
         `
       ),
     ]);
@@ -191,7 +197,7 @@ export class MachineRepository {
   ): Promise<Machine | null> {
     const result = await pool.query<Machine>(
       `
-      UPDATE teste.machines
+      UPDATE ${SCHEMA_QUALIDADE}.machines
       SET
         form_id = COALESCE($2, form_id),
         nome = COALESCE($3, nome),
@@ -237,7 +243,7 @@ export class MachineRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.machines
+      DELETE FROM ${SCHEMA_QUALIDADE}.machines
       WHERE id = $1
       `,
       [id]

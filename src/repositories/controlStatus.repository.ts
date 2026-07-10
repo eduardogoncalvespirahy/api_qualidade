@@ -1,6 +1,12 @@
 import { pool } from "../config/database";
 import { ControlStatus } from "../models/controlStatus.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -23,7 +29,7 @@ export class ControlStatusRepository {
   async create(controlId: string, statusId: string): Promise<ControlStatus> {
     const result = await pool.query<ControlStatus>(
       `
-      INSERT INTO teste.control_status
+      INSERT INTO ${SCHEMA_QUALIDADE}.control_status
       (
         control_id,
         status_id
@@ -71,7 +77,7 @@ export class ControlStatusRepository {
       SELECT
         control_id as "controlId",
         status_id as "statusId"
-      FROM teste.control_status
+      FROM ${SCHEMA_QUALIDADE}.control_status
       WHERE control_id = $1
       `,
       [controlId],
@@ -97,8 +103,8 @@ export class ControlStatusRepository {
     }>(
       `
       SELECT r.nome
-      FROM teste.control_status cr
-      INNER JOIN teste.status r
+      FROM ${SCHEMA_QUALIDADE}.control_status cr
+      INNER JOIN ${SCHEMA_QUALIDADE}.status r
         ON r.id = cr.status_id
       WHERE cr.control_id = $1
       `,
@@ -118,7 +124,7 @@ export class ControlStatusRepository {
   ): Promise<ControlStatus | null> {
     const result = await pool.query<ControlStatus>(
       `
-      UPDATE teste.control_status
+      UPDATE ${SCHEMA_QUALIDADE}.control_status
       SET
         status_id = $2
       WHERE control_id = $1
@@ -141,7 +147,7 @@ export class ControlStatusRepository {
   async delete(controlId: string, statusId: string): Promise<boolean> {
     const result = await pool.query(
       `
-      DELETE FROM teste.control_status
+      DELETE FROM ${SCHEMA_QUALIDADE}.control_status
       WHERE control_id = $1
       AND status_id = $2
       `,

@@ -6,6 +6,12 @@ import {
   UpdateEmployerDTO,
 } from "../models/employer.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -35,7 +41,7 @@ export class EmployerRepository {
   async create(dto: CreateEmployerDTO): Promise<Employer> {
     const result = await pool.query<Employer>(
       `
-      INSERT INTO teste.employers
+      INSERT INTO ${SCHEMA_UNICO}.employers
       (
         id,
         trading_name
@@ -76,7 +82,7 @@ export class EmployerRepository {
     const result = await pool.query<Employer>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.employers
+      FROM ${SCHEMA_UNICO}.employers
       WHERE id = $1
       `,
       [id],
@@ -113,7 +119,7 @@ export class EmployerRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.employers
+      FROM ${SCHEMA_UNICO}.employers
       ORDER BY id ASC
     `;
 
@@ -133,7 +139,7 @@ export class EmployerRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.employers
+        FROM ${SCHEMA_UNICO}.employers
         `,
       ),
     ]);
@@ -156,7 +162,7 @@ export class EmployerRepository {
   async update(id: string, dto: UpdateEmployerDTO): Promise<Employer | null> {
     const result = await pool.query<Employer>(
       `
-      UPDATE teste.employers
+      UPDATE ${SCHEMA_UNICO}.employers
       SET
         trading_name = COALESCE($2, trading_name)
       WHERE id = $1
@@ -188,7 +194,7 @@ export class EmployerRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.employers
+      DELETE FROM ${SCHEMA_UNICO}.employers
       WHERE id = $1
       `,
       [id],

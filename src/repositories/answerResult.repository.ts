@@ -5,6 +5,12 @@ import {
   CreateAnswerResultDTO,
 } from "../models/answerResult.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -45,7 +51,7 @@ export class AnswerResultRepository {
   async create(dto: CreateAnswerResultDTO): Promise<AnswerResult> {
     const result = await pool.query<AnswerResult>(
       `
-      INSERT INTO teste.answer_result
+      INSERT INTO ${SCHEMA_QUALIDADE}.answer_result
       (
         answer_id,
         control_id,
@@ -87,7 +93,7 @@ export class AnswerResultRepository {
     const result = await pool.query<AnswerResult>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answer_result
+      FROM ${SCHEMA_QUALIDADE}.answer_result
       WHERE id = $1
       `,
       [id],
@@ -108,7 +114,7 @@ export class AnswerResultRepository {
     const result = await pool.query<AnswerResult>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answer_result
+      FROM ${SCHEMA_QUALIDADE}.answer_result
       WHERE answer_id = $1
       ORDER BY DATA_CRIACAO DESC LIMIT 1
       `,
@@ -138,7 +144,7 @@ export class AnswerResultRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answer_result
+      FROM ${SCHEMA_QUALIDADE}.answer_result
       ORDER BY id DESC
     `;
 
@@ -158,7 +164,7 @@ export class AnswerResultRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.answer_result
+        FROM ${SCHEMA_QUALIDADE}.answer_result
         `,
       ),
     ]);
@@ -199,7 +205,7 @@ export class AnswerResultRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answer_result
+      FROM ${SCHEMA_QUALIDADE}.answer_result
       WHERE control_id = $1
       ORDER BY id DESC
     `;
@@ -219,7 +225,7 @@ export class AnswerResultRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.answer_result
+        FROM ${SCHEMA_QUALIDADE}.answer_result
         WHERE control_id = $1
         `,
         [controlId],
@@ -250,7 +256,7 @@ export class AnswerResultRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.answer_result
+      DELETE FROM ${SCHEMA_QUALIDADE}.answer_result
       WHERE id = $1
       `,
       [id],

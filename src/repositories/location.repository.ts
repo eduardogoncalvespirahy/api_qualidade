@@ -6,6 +6,12 @@ import {
   UpdateLocationDTO,
 } from "../models/location.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -40,7 +46,7 @@ export class LocationRepository {
   async create(dto: CreateLocationDTO): Promise<Location> {
     const result = await pool.query<Location>(
       `
-      INSERT INTO teste.locations
+      INSERT INTO ${SCHEMA_UNICO}.locations
       (
         employer_id,
         nome,
@@ -82,7 +88,7 @@ export class LocationRepository {
     const result = await pool.query<Location>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.locations
+      FROM ${SCHEMA_UNICO}.locations
       WHERE id = $1
       `,
       [id],
@@ -119,7 +125,7 @@ export class LocationRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.locations
+      FROM ${SCHEMA_UNICO}.locations
       ORDER BY data_criacao DESC
     `;
 
@@ -139,7 +145,7 @@ export class LocationRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.locations
+        FROM ${SCHEMA_UNICO}.locations
         `,
       ),
     ]);
@@ -162,7 +168,7 @@ export class LocationRepository {
   async update(id: string, dto: UpdateLocationDTO): Promise<Location | null> {
     const result = await pool.query<Location>(
       `
-      UPDATE teste.locations
+      UPDATE ${SCHEMA_UNICO}.locations
       SET
         employer_id = COALESCE($2, employer_id),
         nome = COALESCE($3, nome),
@@ -204,7 +210,7 @@ export class LocationRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.locations
+      DELETE FROM ${SCHEMA_UNICO}.locations
       WHERE id = $1
       `,
       [id],

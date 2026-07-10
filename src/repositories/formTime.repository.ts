@@ -6,6 +6,12 @@ import {
   UpdateFormTimeDTO,
 } from "../models/formTime.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -39,7 +45,7 @@ export class FormTimeRepository {
   async create(dto: CreateFormTimeDTO): Promise<FormTime> {
     const result = await pool.query<FormTime>(
       `
-      INSERT INTO teste.form_time
+      INSERT INTO ${SCHEMA_QUALIDADE}.form_time
       (
         form_id,
         tempo_execucao,
@@ -86,7 +92,7 @@ export class FormTimeRepository {
     const result = await pool.query<FormTime>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.form_time
+      FROM ${SCHEMA_QUALIDADE}.form_time
       WHERE form_id = $1
       `,
       [formId],
@@ -123,7 +129,7 @@ export class FormTimeRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.form_time
+      FROM ${SCHEMA_QUALIDADE}.form_time
       ORDER BY data_criacao DESC
     `;
 
@@ -143,7 +149,7 @@ export class FormTimeRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.form_time
+        FROM ${SCHEMA_QUALIDADE}.form_time
         `,
       ),
     ]);
@@ -169,7 +175,7 @@ export class FormTimeRepository {
   ): Promise<FormTime | null> {
     const result = await pool.query<FormTime>(
       `
-      UPDATE teste.form_time
+      UPDATE ${SCHEMA_QUALIDADE}.form_time
       SET
         tempo_execucao = COALESCE($2, tempo_execucao),
         tempo_tolerancia = COALESCE($3, tempo_tolerancia),
@@ -209,7 +215,7 @@ export class FormTimeRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.form_time
+      DELETE FROM ${SCHEMA_QUALIDADE}.form_time
       WHERE form_id = $1
       `,
       [formId],

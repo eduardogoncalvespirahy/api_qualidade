@@ -6,6 +6,12 @@ import {
   UpdateMachineAnswerResultDTO,
 } from "../models/machineAnswerResult.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -48,7 +54,7 @@ export class MachineAnswerResultRepository {
   ): Promise<MachineAnswerResult> {
     const result = await pool.query<MachineAnswerResult>(
       `
-      INSERT INTO teste.machine_answer_result
+      INSERT INTO ${SCHEMA_QUALIDADE}.machine_answer_result
       (
         machine_id,
         answer_id,
@@ -102,7 +108,7 @@ export class MachineAnswerResultRepository {
     const result = await pool.query<MachineAnswerResult>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.machine_answer_result
+      FROM ${SCHEMA_QUALIDADE}.machine_answer_result
       WHERE id = $1
       `,
       [id],
@@ -123,7 +129,7 @@ export class MachineAnswerResultRepository {
     const result = await pool.query<MachineAnswerResult>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.machine_answer_result
+      FROM ${SCHEMA_QUALIDADE}.machine_answer_result
       WHERE answer_id = $1
       ORDER BY DATA_CRIACAO DESC LIMIT 1
       `,
@@ -154,7 +160,7 @@ export class MachineAnswerResultRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.machine_answer_result
+      FROM ${SCHEMA_QUALIDADE}.machine_answer_result
       ORDER BY id DESC
     `;
 
@@ -174,7 +180,7 @@ export class MachineAnswerResultRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.machine_answer_result
+        FROM ${SCHEMA_QUALIDADE}.machine_answer_result
         `,
       ),
     ]);
@@ -216,7 +222,7 @@ export class MachineAnswerResultRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.machine_answer_result
+      FROM ${SCHEMA_QUALIDADE}.machine_answer_result
       WHERE control_id = $1
       ORDER BY id DESC
     `;
@@ -235,7 +241,7 @@ export class MachineAnswerResultRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.machine_answer_result
+        FROM ${SCHEMA_QUALIDADE}.machine_answer_result
         WHERE control_id = $1
         `,
         [controlId],
@@ -263,7 +269,7 @@ export class MachineAnswerResultRepository {
   ): Promise<MachineAnswerResult | null> {
     const result = await pool.query<MachineAnswerResult>(
       `
-      UPDATE teste.machine_answer_result
+      UPDATE ${SCHEMA_QUALIDADE}.machine_answer_result
       SET
         machineid = COALESCE($2, machine_id),
         answer_id = COALESCE($3, answer_id),
@@ -306,7 +312,7 @@ export class MachineAnswerResultRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.machine_answer_result
+      DELETE FROM ${SCHEMA_QUALIDADE}.machine_answer_result
       WHERE id = $1
       `,
       [id],

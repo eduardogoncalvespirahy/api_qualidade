@@ -6,6 +6,12 @@ import {
   UpdateFormDraftDTO,
 } from "../models/formDraft.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -35,7 +41,7 @@ export class FormDraftRepository {
   async create(dto: CreateFormDraftDTO): Promise<FormDraft> {
     const result = await pool.query<FormDraft>(
       `
-      INSERT INTO teste.form_draft
+      INSERT INTO ${SCHEMA_QUALIDADE}.form_draft
       (
         form_id,
         rascunho_data
@@ -51,7 +57,6 @@ export class FormDraftRepository {
     );
 
     const formDraft = result.rows[0];
-    console.log("Criado category: ", formDraft);
 
     await Promise.all([
       cache.set(cacheKeys.byId(formDraft.formId), formDraft, CACHE_TTL),
@@ -74,7 +79,7 @@ export class FormDraftRepository {
     const result = await pool.query<FormDraft>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.form_draft
+      FROM ${SCHEMA_QUALIDADE}.form_draft
       WHERE form_id = $1
       `,
       [id],
@@ -111,7 +116,7 @@ export class FormDraftRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.form_draft
+      FROM ${SCHEMA_QUALIDADE}.form_draft
       ORDER BY form_id DESC
     `;
 
@@ -131,7 +136,7 @@ export class FormDraftRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.form_draft
+        FROM ${SCHEMA_QUALIDADE}.form_draft
         `,
       ),
     ]);
@@ -154,7 +159,7 @@ export class FormDraftRepository {
   async update(id: string, dto: UpdateFormDraftDTO): Promise<FormDraft | null> {
     const result = await pool.query<FormDraft>(
       `
-    UPDATE teste.form_draft
+    UPDATE ${SCHEMA_QUALIDADE}.form_draft
     SET
     rascunho_data = $2
     WHERE form_id = $1
@@ -186,7 +191,7 @@ export class FormDraftRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.form_draft
+      DELETE FROM ${SCHEMA_QUALIDADE}.form_draft
       WHERE form_id = $1
       `,
       [id],

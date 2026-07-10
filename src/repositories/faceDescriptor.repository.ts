@@ -1,11 +1,17 @@
 import { pool } from "../config/database";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 export class FaceDescriptorRepository {
   /** Cria/atualiza o descritor facial do usuário. */
   async upsert(userId: string, descriptor: number[]): Promise<void> {
     await pool.query(
       `
-      INSERT INTO teste.face_descriptors (user_id, descriptor, updated_at)
+      INSERT INTO ${SCHEMA_UNICO}.face_descriptors (user_id, descriptor, updated_at)
       VALUES ($1, $2, NOW())
       ON CONFLICT (user_id)
       DO UPDATE SET
@@ -19,7 +25,7 @@ export class FaceDescriptorRepository {
   /** Retorna o descritor (vetor) do usuário, ou null se não houver. */
   async findByUserId(userId: string): Promise<number[] | null> {
     const result = await pool.query<{ descriptor: number[] | string }>(
-      `SELECT descriptor FROM teste.face_descriptors WHERE user_id = $1`,
+      `SELECT descriptor FROM ${SCHEMA_UNICO}.face_descriptors WHERE user_id = $1`,
       [userId],
     );
 
@@ -36,7 +42,7 @@ export class FaceDescriptorRepository {
 
   async delete(userId: string): Promise<void> {
     await pool.query(
-      `DELETE FROM teste.face_descriptors WHERE user_id = $1`,
+      `DELETE FROM ${SCHEMA_UNICO}.face_descriptors WHERE user_id = $1`,
       [userId],
     );
   }

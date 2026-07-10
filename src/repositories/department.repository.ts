@@ -6,6 +6,12 @@ import {
   UpdateDepartmentDTO,
 } from "../models/department.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -35,7 +41,7 @@ export class DepartmentRepository {
   async create(dto: CreateDepartmentDTO): Promise<Department> {
     const result = await pool.query<Department>(
       `
-      INSERT INTO teste.departments
+      INSERT INTO ${SCHEMA_UNICO}.departments
       (
         id,
         name
@@ -76,7 +82,7 @@ export class DepartmentRepository {
     const result = await pool.query<Department>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.departments
+      FROM ${SCHEMA_UNICO}.departments
       WHERE id = $1
       `,
       [id],
@@ -113,7 +119,7 @@ export class DepartmentRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.departments
+      FROM ${SCHEMA_UNICO}.departments
       ORDER BY id ASC
     `;
 
@@ -133,7 +139,7 @@ export class DepartmentRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.departments
+        FROM ${SCHEMA_UNICO}.departments
         `,
       ),
     ]);
@@ -159,7 +165,7 @@ export class DepartmentRepository {
   ): Promise<Department | null> {
     const result = await pool.query<Department>(
       `
-      UPDATE teste.departments
+      UPDATE ${SCHEMA_UNICO}.departments
       SET
         name = COALESCE($2, name)
       WHERE id = $1
@@ -191,7 +197,7 @@ export class DepartmentRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.departments
+      DELETE FROM ${SCHEMA_UNICO}.departments
       WHERE id = $1
       `,
       [id],

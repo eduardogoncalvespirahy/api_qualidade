@@ -6,6 +6,12 @@ import {
   UpdateCategorieAnswerDTO,
 } from "../models/categorieAnswer.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -39,7 +45,7 @@ export class CategorieAnswerRepository {
   async create(dto: CreateCategorieAnswerDTO): Promise<CategorieAnswer> {
     const result = await pool.query<CategorieAnswer>(
       `
-      INSERT INTO teste.categories_answers
+      INSERT INTO ${SCHEMA_QUALIDADE}.categories_answers
       (
         nome,
         descricao,
@@ -79,7 +85,7 @@ export class CategorieAnswerRepository {
     const result = await pool.query<CategorieAnswer>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.categories_answers
+      FROM ${SCHEMA_QUALIDADE}.categories_answers
       WHERE id = $1
       `,
       [id],
@@ -116,7 +122,7 @@ export class CategorieAnswerRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.categories_answers
+      FROM ${SCHEMA_QUALIDADE}.categories_answers
       ORDER BY data_criacao DESC
     `;
 
@@ -136,7 +142,7 @@ export class CategorieAnswerRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.categories_answers
+        FROM ${SCHEMA_QUALIDADE}.categories_answers
         `,
       ),
     ]);
@@ -162,7 +168,7 @@ export class CategorieAnswerRepository {
   ): Promise<CategorieAnswer | null> {
     const result = await pool.query<CategorieAnswer>(
       `
-      UPDATE teste.categories_answers
+      UPDATE ${SCHEMA_QUALIDADE}.categories_answers
       SET
         nome = COALESCE($2, nome),
         descricao = COALESCE($3, descricao),
@@ -197,7 +203,7 @@ export class CategorieAnswerRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.categories_answers
+      DELETE FROM ${SCHEMA_QUALIDADE}.categories_answers
       WHERE id = $1
       `,
       [id],

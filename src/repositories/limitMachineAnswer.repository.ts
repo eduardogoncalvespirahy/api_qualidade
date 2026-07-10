@@ -6,6 +6,12 @@ import {
   UpdateLimitMachineAnswerDTO,
 } from "../models/limitMachineAnswer.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -40,7 +46,7 @@ export class LimitMachineAnswerRepository {
   async create(dto: CreateLimitMachineAnswerDTO): Promise<LimitMachineAnswer> {
     const result = await pool.query<LimitMachineAnswer>(
       `
-      INSERT INTO teste.limits_machine_answers
+      INSERT INTO ${SCHEMA_QUALIDADE}.limits_machine_answers
       (
         machine_id,
         limit_max,
@@ -87,7 +93,7 @@ export class LimitMachineAnswerRepository {
     const result = await pool.query<LimitMachineAnswer>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.limits_machine_answers
+      FROM ${SCHEMA_QUALIDADE}.limits_machine_answers
       WHERE id = $1
       `,
       [id],
@@ -108,7 +114,7 @@ export class LimitMachineAnswerRepository {
     const result = await pool.query<LimitMachineAnswer>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.limits_machine_answers
+      FROM ${SCHEMA_QUALIDADE}.limits_machine_answers
       WHERE machine_id = $1
       ORDER BY data_criacao DESC
       `,
@@ -138,7 +144,7 @@ export class LimitMachineAnswerRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.limits_machine_answers
+      FROM ${SCHEMA_QUALIDADE}.limits_machine_answers
       ORDER BY data_criacao DESC
     `;
 
@@ -158,7 +164,7 @@ export class LimitMachineAnswerRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.limits_machine_answers
+        FROM ${SCHEMA_QUALIDADE}.limits_machine_answers
         `,
       ),
     ]);
@@ -184,7 +190,7 @@ export class LimitMachineAnswerRepository {
   ): Promise<LimitMachineAnswer | null> {
     const result = await pool.query<LimitMachineAnswer>(
       `
-      UPDATE teste.limits_machine_answers
+      UPDATE ${SCHEMA_QUALIDADE}.limits_machine_answers
       SET
         machine_id = COALESCE($2, machine_id),
         limit_max = COALESCE($3, limit_max),
@@ -226,7 +232,7 @@ export class LimitMachineAnswerRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.limits_machine_answers
+      DELETE FROM ${SCHEMA_QUALIDADE}.limits_machine_answers
       WHERE id = $1
       `,
       [id],

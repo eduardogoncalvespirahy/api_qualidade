@@ -1,6 +1,12 @@
 import { pool } from "../config/database";
 import { CredentialRole } from "../models/credentialRole.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -25,7 +31,7 @@ export class CredentialRoleRepository {
   async create(credentialId: string, roleId: string): Promise<CredentialRole> {
     const result = await pool.query<CredentialRole>(
       `
-      INSERT INTO teste.credentials_roles
+      INSERT INTO ${SCHEMA_UNICO}.credentials_roles
       (
         credential_id,
         role_id
@@ -73,7 +79,7 @@ export class CredentialRoleRepository {
       SELECT
         credential_id as "credentialId",
         role_id as "roleId"
-      FROM teste.credentials_roles
+      FROM ${SCHEMA_UNICO}.credentials_roles
       WHERE credential_id = $1
       `,
       [credentialId],
@@ -99,8 +105,8 @@ export class CredentialRoleRepository {
     }>(
       `
       SELECT r.nome
-      FROM teste.credentials_roles cr
-      INNER JOIN teste.roles r
+      FROM ${SCHEMA_UNICO}.credentials_roles cr
+      INNER JOIN ${SCHEMA_UNICO}.roles r
         ON r.id = cr.role_id
       WHERE cr.credential_id = $1
       `,
@@ -117,7 +123,7 @@ export class CredentialRoleRepository {
   async delete(credentialId: string, roleId: string): Promise<boolean> {
     const result = await pool.query(
       `
-      DELETE FROM teste.credentials_roles
+      DELETE FROM ${SCHEMA_UNICO}.credentials_roles
       WHERE credential_id = $1
       AND role_id = $2
       `,

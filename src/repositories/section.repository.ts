@@ -6,6 +6,12 @@ import {
   UpdateSectionDTO,
 } from "../models/section.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -40,7 +46,7 @@ export class SectionRepository {
   async create(dto: CreateSectionDTO): Promise<Section> {
     const result = await pool.query<Section>(
       `
-      INSERT INTO teste.sections
+      INSERT INTO ${SCHEMA_UNICO}.sections
       (
         employer_id,
         nome,
@@ -82,7 +88,7 @@ export class SectionRepository {
     const result = await pool.query<Section>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.sections
+      FROM ${SCHEMA_UNICO}.sections
       WHERE id = $1
       `,
       [id],
@@ -119,7 +125,7 @@ export class SectionRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.sections
+      FROM ${SCHEMA_UNICO}.sections
       ORDER BY data_criacao DESC
     `;
 
@@ -139,7 +145,7 @@ export class SectionRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.sections
+        FROM ${SCHEMA_UNICO}.sections
         `,
       ),
     ]);
@@ -162,7 +168,7 @@ export class SectionRepository {
   async update(id: string, dto: UpdateSectionDTO): Promise<Section | null> {
     const result = await pool.query<Section>(
       `
-      UPDATE teste.sections
+      UPDATE ${SCHEMA_UNICO}.sections
       SET
         employer_id = COALESCE($2, employer_id),
         nome = COALESCE($3, nome),
@@ -204,7 +210,7 @@ export class SectionRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.sections
+      DELETE FROM ${SCHEMA_UNICO}.sections
       WHERE id = $1
       `,
       [id],

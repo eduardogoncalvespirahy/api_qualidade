@@ -4,6 +4,12 @@ import {
   SyncLogRecord,
   CreateSyncLogDTO
 } from "../models/syncLog.model";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const SELECT_COLUMNS = `
   id,
@@ -24,7 +30,7 @@ export class SyncLogRepository {
   async create(dto: CreateSyncLogDTO): Promise<SyncLogRecord> {
     const result = await pool.query<SyncLogRecord>(
       `
-      INSERT INTO teste.sync_logs
+      INSERT INTO ${SCHEMA_UNICO}.sync_logs
         (started_at, finished_at, duration_ms, inserted, updated,
          removed, total_api, total_before, success, error)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
@@ -49,7 +55,7 @@ export class SyncLogRepository {
 
   async findById(id: string): Promise<SyncLogRecord | null> {
     const result = await pool.query<SyncLogRecord>(
-      `SELECT ${SELECT_COLUMNS} FROM teste.sync_logs WHERE id = $1`,
+      `SELECT ${SELECT_COLUMNS} FROM ${SCHEMA_UNICO}.sync_logs WHERE id = $1`,
       [id]
     );
     return result.rows[0] ?? null;
@@ -65,14 +71,14 @@ export class SyncLogRepository {
       pool.query<SyncLogRecord>(
         `
         SELECT ${SELECT_COLUMNS}
-        FROM teste.sync_logs
+        FROM ${SCHEMA_UNICO}.sync_logs
         ORDER BY started_at DESC
         LIMIT $1 OFFSET $2
         `,
         [limit, offset]
       ),
       pool.query<{ total: string }>(
-        `SELECT COUNT(*) as total FROM teste.sync_logs`
+        `SELECT COUNT(*) as total FROM ${SCHEMA_UNICO}.sync_logs`
       ),
     ]);
 
@@ -92,7 +98,7 @@ export class SyncLogRepository {
     if (!existing) {
       return null;
     }
-    await pool.query(`DELETE FROM teste.sync_logs WHERE id = $1`, [id]);
+    await pool.query(`DELETE FROM ${SCHEMA_UNICO}.sync_logs WHERE id = $1`, [id]);
     return existing;
   }
 }

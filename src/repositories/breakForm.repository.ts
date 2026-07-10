@@ -6,6 +6,12 @@ import {
   UpdateBreakFormDTO,
 } from "../models/breakForm.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -41,7 +47,7 @@ export class BreakFormRepository {
   async create(dto: CreateBreakFormDTO): Promise<BreakForm> {
     const result = await pool.query<BreakForm>(
       `
-      INSERT INTO teste.breaks_forms
+      INSERT INTO ${SCHEMA_QUALIDADE}.breaks_forms
       (
         form_id,
         hora_inicio,
@@ -91,7 +97,7 @@ export class BreakFormRepository {
     const result = await pool.query<BreakForm>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.breaks_forms
+      FROM ${SCHEMA_QUALIDADE}.breaks_forms
       WHERE id = $1
       `,
       [id],
@@ -112,7 +118,7 @@ export class BreakFormRepository {
     const result = await pool.query<BreakForm>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.breaks_forms
+      FROM ${SCHEMA_QUALIDADE}.breaks_forms
       WHERE form_id = $1
       ORDER BY hora_inicio ASC
       `,
@@ -142,7 +148,7 @@ export class BreakFormRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.breaks_forms
+      FROM ${SCHEMA_QUALIDADE}.breaks_forms
       ORDER BY data_criacao DESC
     `;
 
@@ -162,7 +168,7 @@ export class BreakFormRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.breaks_forms
+        FROM ${SCHEMA_QUALIDADE}.breaks_forms
         `,
       ),
     ]);
@@ -185,7 +191,7 @@ export class BreakFormRepository {
   async update(id: string, dto: UpdateBreakFormDTO): Promise<BreakForm | null> {
     const result = await pool.query<BreakForm>(
       `
-      UPDATE teste.breaks_forms
+      UPDATE ${SCHEMA_QUALIDADE}.breaks_forms
       SET
         form_id = COALESCE($2, form_id),
         hora_inicio = COALESCE($3, hora_inicio),
@@ -229,7 +235,7 @@ export class BreakFormRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.breaks_forms
+      DELETE FROM ${SCHEMA_QUALIDADE}.breaks_forms
       WHERE id = $1
       `,
       [id],

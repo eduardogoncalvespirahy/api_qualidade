@@ -6,6 +6,12 @@ import {
   UpdateMachineAnswerDTO,
 } from "../models/machineAnswer.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -40,7 +46,7 @@ export class MachineAnswerRepository {
   async create(dto: CreateMachineAnswerDTO): Promise<MachineAnswer> {
     const result = await pool.query<MachineAnswer>(
       `
-      INSERT INTO teste.machine_answers
+      INSERT INTO ${SCHEMA_QUALIDADE}.machine_answers
       (
         machine_id,
         nome,
@@ -82,7 +88,7 @@ export class MachineAnswerRepository {
     const result = await pool.query<MachineAnswer>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.machine_answers
+      FROM ${SCHEMA_QUALIDADE}.machine_answers
       WHERE id = $1
       `,
       [id],
@@ -103,7 +109,7 @@ export class MachineAnswerRepository {
     const result = await pool.query<MachineAnswer>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.machine_answers
+      FROM ${SCHEMA_QUALIDADE}.machine_answers
       WHERE machine_id = $1
       ORDER BY nome ASC
       `,
@@ -133,7 +139,7 @@ export class MachineAnswerRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.machine_answers
+      FROM ${SCHEMA_QUALIDADE}.machine_answers
       ORDER BY data_criacao DESC
     `;
 
@@ -153,7 +159,7 @@ export class MachineAnswerRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.machine_answers
+        FROM ${SCHEMA_QUALIDADE}.machine_answers
         `,
       ),
     ]);
@@ -179,7 +185,7 @@ export class MachineAnswerRepository {
   ): Promise<MachineAnswer | null> {
     const result = await pool.query<MachineAnswer>(
       `
-      UPDATE teste.machine_answers
+      UPDATE ${SCHEMA_QUALIDADE}.machine_answers
       SET
         machine_id = COALESCE($2, machine_id),
         nome = COALESCE($3, nome),
@@ -221,7 +227,7 @@ export class MachineAnswerRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.machine_answers
+      DELETE FROM ${SCHEMA_QUALIDADE}.machine_answers
       WHERE id = $1
       `,
       [id],

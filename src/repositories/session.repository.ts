@@ -2,6 +2,12 @@ import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
 import { Session, CreateSessionDTO } from "../models/session.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -38,7 +44,7 @@ export class SessionRepository {
   async create(dto: CreateSessionDTO): Promise<Session> {
     const result = await pool.query<Session>(
       `
-      INSERT INTO teste.sessions
+      INSERT INTO ${SCHEMA_UNICO}.sessions
       (
         credential_id,
         refreshtoken,
@@ -83,7 +89,7 @@ export class SessionRepository {
     const result = await pool.query<Session>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.sessions
+      FROM ${SCHEMA_UNICO}.sessions
       WHERE id = $1
       `,
       [id],
@@ -113,7 +119,7 @@ export class SessionRepository {
     const result = await pool.query<Session>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.sessions
+      FROM ${SCHEMA_UNICO}.sessions
       WHERE refreshtoken = $1
       `,
       [refreshToken],
@@ -150,7 +156,7 @@ export class SessionRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.sessions
+      FROM ${SCHEMA_UNICO}.sessions
       ORDER BY data_criacao DESC
     `;
 
@@ -170,7 +176,7 @@ export class SessionRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.sessions
+        FROM ${SCHEMA_UNICO}.sessions
         `,
       ),
     ]);
@@ -195,7 +201,7 @@ export class SessionRepository {
 
     const result = await pool.query<Session>(
       `
-      UPDATE teste.sessions
+      UPDATE ${SCHEMA_UNICO}.sessions
       SET
         revogado = true,
         data_alteracao = CURRENT_TIMESTAMP
@@ -235,7 +241,7 @@ export class SessionRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.sessions
+      DELETE FROM ${SCHEMA_UNICO}.sessions
       WHERE id = $1
       `,
       [id],

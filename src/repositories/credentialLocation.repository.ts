@@ -1,6 +1,12 @@
 import { pool } from "../config/database";
 import { CredentialLocation } from "../models/credentialLocation.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -28,7 +34,7 @@ export class CredentialLocationRepository {
   ): Promise<CredentialLocation> {
     const result = await pool.query<CredentialLocation>(
       `
-      INSERT INTO teste.credentials_locations
+      INSERT INTO ${SCHEMA_UNICO}.credentials_locations
       (
         credential_id,
         location_id
@@ -76,7 +82,7 @@ export class CredentialLocationRepository {
       SELECT
         credential_id as "credentialId",
         location_id as "locationId"
-      FROM teste.credentials_locations
+      FROM ${SCHEMA_UNICO}.credentials_locations
       WHERE credential_id = $1
       `,
       [credentialId],
@@ -102,8 +108,8 @@ export class CredentialLocationRepository {
     }>(
       `
       SELECT r.nome
-      FROM teste.credentials_locations cr
-      INNER JOIN teste.locations r
+      FROM ${SCHEMA_UNICO}.credentials_locations cr
+      INNER JOIN ${SCHEMA_UNICO}.locations r
         ON r.id = cr.location_id
       WHERE cr.credential_id = $1
       `,
@@ -120,7 +126,7 @@ export class CredentialLocationRepository {
   async delete(credentialId: string, locationId: string): Promise<boolean> {
     const result = await pool.query(
       `
-      DELETE FROM teste.credentials_locations
+      DELETE FROM ${SCHEMA_UNICO}.credentials_locations
       WHERE credential_id = $1
       AND location_id = $2
       `,

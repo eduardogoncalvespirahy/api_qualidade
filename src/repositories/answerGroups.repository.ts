@@ -2,6 +2,12 @@ import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
 import { AnswerGroups, CreateAnswerGroupsDTO, UpdateAnswerGroupsDTO } from "../models/answerGroups.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -36,7 +42,7 @@ export class AnswerGroupsRepository {
   async create(dto: CreateAnswerGroupsDTO): Promise<AnswerGroups> {
     const result = await pool.query<AnswerGroups>(
       `
-      INSERT INTO teste.answer_groups
+      INSERT INTO ${SCHEMA_QUALIDADE}.answer_groups
       (
         form_id,
         nome,
@@ -78,7 +84,7 @@ export class AnswerGroupsRepository {
     const result = await pool.query<AnswerGroups>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answer_groups
+      FROM ${SCHEMA_QUALIDADE}.answer_groups
       WHERE id = $1
       `,
       [id],
@@ -112,7 +118,7 @@ export class AnswerGroupsRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answer_groups
+      FROM ${SCHEMA_QUALIDADE}.answer_groups
       ORDER BY data_criacao DESC
     `;
 
@@ -132,7 +138,7 @@ export class AnswerGroupsRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.answer_groups
+        FROM ${SCHEMA_QUALIDADE}.answer_groups
         `,
       ),
     ]);
@@ -155,7 +161,7 @@ export class AnswerGroupsRepository {
   async update(id: string, dto: UpdateAnswerGroupsDTO): Promise<AnswerGroups | null> {
     const result = await pool.query<AnswerGroups>(
       `
-      UPDATE teste.answer_groups
+      UPDATE ${SCHEMA_QUALIDADE}.answer_groups
       SET
         form_id = COALESCE($2, form_id),
         nome = COALESCE($3, nome),
@@ -197,7 +203,7 @@ export class AnswerGroupsRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.answer_groups
+      DELETE FROM ${SCHEMA_QUALIDADE}.answer_groups
       WHERE id = $1
       `,
       [id],

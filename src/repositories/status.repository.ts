@@ -7,6 +7,12 @@ import {
   UpdateStatusDTO,
 } from "../models/status.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -39,7 +45,7 @@ export class StatusRepository {
   async create(dto: CreateStatusDTO): Promise<Status> {
     const result = await pool.query<Status>(
       `
-      INSERT INTO teste.status
+      INSERT INTO ${SCHEMA_UNICO}.status
       (
         nome,
         status
@@ -77,7 +83,7 @@ export class StatusRepository {
     const result = await pool.query<Status>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.status
+      FROM ${SCHEMA_UNICO}.status
       WHERE id = $1
       `,
       [id],
@@ -114,7 +120,7 @@ export class StatusRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.status
+      FROM ${SCHEMA_UNICO}.status
       ORDER BY data_criacao DESC
     `;
 
@@ -134,7 +140,7 @@ export class StatusRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.status
+        FROM ${SCHEMA_UNICO}.status
         `,
       ),
     ]);
@@ -157,7 +163,7 @@ export class StatusRepository {
   async update(id: string, dto: UpdateStatusDTO): Promise<Status | null> {
     const result = await pool.query<Status>(
       `
-      UPDATE teste.status
+      UPDATE ${SCHEMA_UNICO}.status
       SET
         nome = COALESCE($2, nome),
         status = COALESCE($3, status),
@@ -191,7 +197,7 @@ export class StatusRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.status
+      DELETE FROM ${SCHEMA_UNICO}.status
       WHERE id = $1
       `,
       [id],

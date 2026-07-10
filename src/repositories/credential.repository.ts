@@ -2,6 +2,12 @@ import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
 import { Credential, CreateCredentialDTO } from "../models/credential.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -39,7 +45,7 @@ export class CredentialRepository {
   ): Promise<Credential> {
     const result = await pool.query<Credential>(
       `
-      INSERT INTO teste.credentials
+      INSERT INTO ${SCHEMA_UNICO}.credentials
       (
         user_id,
         system_id,
@@ -81,7 +87,7 @@ export class CredentialRepository {
     const result = await pool.query<Credential>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.credentials
+      FROM ${SCHEMA_UNICO}.credentials
       WHERE id = $1
       `,
       [id],
@@ -102,7 +108,7 @@ export class CredentialRepository {
     const result = await pool.query<Credential>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.credentials
+      FROM ${SCHEMA_UNICO}.credentials
       WHERE user_id = $1
       ORDER BY data_criacao DESC
       `,
@@ -119,7 +125,7 @@ export class CredentialRepository {
     const result = await pool.query<Credential>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.credentials
+      FROM ${SCHEMA_UNICO}.credentials
       WHERE user_id = $1
       AND system_id = $2
       `,
@@ -149,7 +155,7 @@ export class CredentialRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.credentials
+      FROM ${SCHEMA_UNICO}.credentials
       ORDER BY data_criacao DESC
     `;
 
@@ -169,7 +175,7 @@ export class CredentialRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.credentials
+        FROM ${SCHEMA_UNICO}.credentials
         `,
       ),
     ]);
@@ -198,7 +204,7 @@ export class CredentialRepository {
   ): Promise<Credential | null> {
     const result = await pool.query<Credential>(
       `
-      UPDATE teste.credentials
+      UPDATE ${SCHEMA_UNICO}.credentials
       SET
         senha_hash = COALESCE($2, senha_hash),
         status = COALESCE($3, status),
@@ -226,7 +232,7 @@ export class CredentialRepository {
   async touchLastLogin(id: string): Promise<void> {
     await pool.query(
       `
-      UPDATE teste.credentials
+      UPDATE ${SCHEMA_UNICO}.credentials
       SET data_ultimo_login = CURRENT_TIMESTAMP
       WHERE id = $1
       `,
@@ -245,7 +251,7 @@ export class CredentialRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.credentials
+      DELETE FROM ${SCHEMA_UNICO}.credentials
       WHERE id = $1
       `,
       [id],

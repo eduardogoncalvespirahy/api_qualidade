@@ -6,6 +6,12 @@ import {
   UpdateLimitAnswerDTO,
 } from "../models/limitAnswer.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -40,7 +46,7 @@ export class LimitAnswerRepository {
   async create(dto: CreateLimitAnswerDTO): Promise<LimitAnswer> {
     const result = await pool.query<LimitAnswer>(
       `
-      INSERT INTO teste.limits_answers
+      INSERT INTO ${SCHEMA_QUALIDADE}.limits_answers
       (
         answer_id,
         limit_max,
@@ -87,7 +93,7 @@ export class LimitAnswerRepository {
     const result = await pool.query<LimitAnswer>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.limits_answers
+      FROM ${SCHEMA_QUALIDADE}.limits_answers
       WHERE id = $1
       `,
       [id],
@@ -108,7 +114,7 @@ export class LimitAnswerRepository {
     const result = await pool.query<LimitAnswer>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.limits_answers
+      FROM ${SCHEMA_QUALIDADE}.limits_answers
       WHERE answer_id = $1
       ORDER BY data_criacao DESC
       `,
@@ -138,7 +144,7 @@ export class LimitAnswerRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.limits_answers
+      FROM ${SCHEMA_QUALIDADE}.limits_answers
       ORDER BY data_criacao DESC
     `;
 
@@ -158,7 +164,7 @@ export class LimitAnswerRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.limits_answers
+        FROM ${SCHEMA_QUALIDADE}.limits_answers
         `,
       ),
     ]);
@@ -199,7 +205,7 @@ export class LimitAnswerRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.limits_answers
+      FROM ${SCHEMA_QUALIDADE}.limits_answers
       WHERE answer_id = $1
       ORDER BY data_criacao DESC
     `;
@@ -220,7 +226,7 @@ export class LimitAnswerRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.limits_answers
+        FROM ${SCHEMA_QUALIDADE}.limits_answers
         WHERE answer_id = $1
         `,
         [answerId],
@@ -248,7 +254,7 @@ export class LimitAnswerRepository {
   ): Promise<LimitAnswer | null> {
     const result = await pool.query<LimitAnswer>(
       `
-      UPDATE teste.limits_answers
+      UPDATE ${SCHEMA_QUALIDADE}.limits_answers
       SET
         answer_id = COALESCE($2, answer_id),
         limit_max = COALESCE($3, limit_max),
@@ -290,7 +296,7 @@ export class LimitAnswerRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.limits_answers
+      DELETE FROM ${SCHEMA_QUALIDADE}.limits_answers
       WHERE id = $1
       `,
       [id],

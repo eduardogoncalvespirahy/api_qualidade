@@ -2,6 +2,12 @@ import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
 import { Role, CreateRoleDTO, UpdateRoleDTO } from "../models/role.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -36,7 +42,7 @@ export class RoleRepository {
   async create(dto: CreateRoleDTO): Promise<Role> {
     const result = await pool.query<Role>(
       `
-      INSERT INTO teste.roles
+      INSERT INTO ${SCHEMA_UNICO}.roles
       (
         system_id,
         nome,
@@ -78,7 +84,7 @@ export class RoleRepository {
     const result = await pool.query<Role>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.roles
+      FROM ${SCHEMA_UNICO}.roles
       WHERE id = $1
       `,
       [id],
@@ -112,7 +118,7 @@ export class RoleRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.roles
+      FROM ${SCHEMA_UNICO}.roles
       ORDER BY data_criacao DESC
     `;
 
@@ -132,7 +138,7 @@ export class RoleRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.roles
+        FROM ${SCHEMA_UNICO}.roles
         `,
       ),
     ]);
@@ -155,7 +161,7 @@ export class RoleRepository {
   async update(id: string, dto: UpdateRoleDTO): Promise<Role | null> {
     const result = await pool.query<Role>(
       `
-      UPDATE teste.roles
+      UPDATE ${SCHEMA_UNICO}.roles
       SET
         system_id = COALESCE($2, system_id),
         nome = COALESCE($3, nome),
@@ -197,7 +203,7 @@ export class RoleRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.roles
+      DELETE FROM ${SCHEMA_UNICO}.roles
       WHERE id = $1
       `,
       [id],

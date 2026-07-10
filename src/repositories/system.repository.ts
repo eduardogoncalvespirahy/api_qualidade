@@ -6,6 +6,12 @@ import {
   UpdateSystemDTO,
 } from "../models/system.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -40,7 +46,7 @@ export class SystemRepository {
   async create(dto: CreateSystemDTO): Promise<System> {
     const result = await pool.query<System>(
       `
-      INSERT INTO teste.systems
+      INSERT INTO ${SCHEMA_UNICO}.systems
       (
         nome,
         descricao,
@@ -82,7 +88,7 @@ export class SystemRepository {
     const result = await pool.query<System>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.systems
+      FROM ${SCHEMA_UNICO}.systems
       WHERE id = $1
       `,
       [id],
@@ -119,7 +125,7 @@ export class SystemRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.systems
+      FROM ${SCHEMA_UNICO}.systems
       ORDER BY data_criacao DESC
     `;
 
@@ -139,7 +145,7 @@ export class SystemRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.systems
+        FROM ${SCHEMA_UNICO}.systems
         `,
       ),
     ]);
@@ -162,7 +168,7 @@ export class SystemRepository {
   async update(id: string, dto: UpdateSystemDTO): Promise<System | null> {
     const result = await pool.query<System>(
       `
-      UPDATE teste.systems
+      UPDATE ${SCHEMA_UNICO}.systems
       SET
         nome = COALESCE($2, nome),
         descricao = COALESCE($3, descricao),
@@ -204,7 +210,7 @@ export class SystemRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.systems
+      DELETE FROM ${SCHEMA_UNICO}.systems
       WHERE id = $1
       `,
       [id],

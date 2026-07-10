@@ -16,8 +16,6 @@ export class FaceController {
       });
     }
 
-    console.log("Requisição: ",req);
-
     const imagemBuffer = req.file?.buffer;
 
     if (image) {

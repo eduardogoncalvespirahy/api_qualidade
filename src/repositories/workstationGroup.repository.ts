@@ -6,6 +6,12 @@ import {
   UpdateWorkstationGroupDTO,
 } from "../models/workstationGroup.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -35,7 +41,7 @@ export class WorkstationGroupRepository {
   async create(dto: CreateWorkstationGroupDTO): Promise<WorkstationGroup> {
     const result = await pool.query<WorkstationGroup>(
       `
-      INSERT INTO teste.workstation_groups
+      INSERT INTO ${SCHEMA_UNICO}.workstation_groups
       (
         id,
         name
@@ -80,7 +86,7 @@ export class WorkstationGroupRepository {
     const result = await pool.query<WorkstationGroup>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.workstation_groups
+      FROM ${SCHEMA_UNICO}.workstation_groups
       WHERE id = $1
       `,
       [id],
@@ -117,7 +123,7 @@ export class WorkstationGroupRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.workstation_groups
+      FROM ${SCHEMA_UNICO}.workstation_groups
       ORDER BY id ASC
     `;
 
@@ -137,7 +143,7 @@ export class WorkstationGroupRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.workstation_groups
+        FROM ${SCHEMA_UNICO}.workstation_groups
         `,
       ),
     ]);
@@ -163,7 +169,7 @@ export class WorkstationGroupRepository {
   ): Promise<WorkstationGroup | null> {
     const result = await pool.query<WorkstationGroup>(
       `
-      UPDATE teste.workstation_groups
+      UPDATE ${SCHEMA_UNICO}.workstation_groups
       SET
         name = COALESCE($2, name)
       WHERE id = $1
@@ -195,7 +201,7 @@ export class WorkstationGroupRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.workstation_groups
+      DELETE FROM ${SCHEMA_UNICO}.workstation_groups
       WHERE id = $1
       `,
       [id],

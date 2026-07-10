@@ -6,6 +6,12 @@ import {
   UpdateBreakMachineDTO,
 } from "../models/breakMachine.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -41,7 +47,7 @@ export class BreakMachineRepository {
   async create(dto: CreateBreakMachineDTO): Promise<BreakMachine> {
     const result = await pool.query<BreakMachine>(
       `
-      INSERT INTO teste.breaks_machines
+      INSERT INTO ${SCHEMA_QUALIDADE}.breaks_machines
       (
         machine_id,
         hora_inicio,
@@ -91,7 +97,7 @@ export class BreakMachineRepository {
     const result = await pool.query<BreakMachine>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.breaks_machines
+      FROM ${SCHEMA_QUALIDADE}.breaks_machines
       WHERE id = $1
       `,
       [id],
@@ -112,7 +118,7 @@ export class BreakMachineRepository {
     const result = await pool.query<BreakMachine>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.breaks_machines
+      FROM ${SCHEMA_QUALIDADE}.breaks_machines
       WHERE machine_id = $1
       ORDER BY hora_inicio ASC
       `,
@@ -142,7 +148,7 @@ export class BreakMachineRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.breaks_machines
+      FROM ${SCHEMA_QUALIDADE}.breaks_machines
       ORDER BY data_criacao DESC
     `;
 
@@ -162,7 +168,7 @@ export class BreakMachineRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.breaks_machines
+        FROM ${SCHEMA_QUALIDADE}.breaks_machines
         `,
       ),
     ]);
@@ -188,7 +194,7 @@ export class BreakMachineRepository {
   ): Promise<BreakMachine | null> {
     const result = await pool.query<BreakMachine>(
       `
-      UPDATE teste.breaks_machines
+      UPDATE ${SCHEMA_QUALIDADE}.breaks_machines
       SET
         machine_id = COALESCE($2, machine_id),
         hora_inicio = COALESCE($3, hora_inicio),
@@ -232,7 +238,7 @@ export class BreakMachineRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.breaks_machines
+      DELETE FROM ${SCHEMA_QUALIDADE}.breaks_machines
       WHERE id = $1
       `,
       [id],

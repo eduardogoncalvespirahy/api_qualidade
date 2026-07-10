@@ -6,6 +6,12 @@ import {
   UpdateAnswerDTO,
 } from "../models/answer.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -41,7 +47,7 @@ export class AnswerRepository {
   async create(dto: CreateAnswerDTO): Promise<Answer> {
     const result = await pool.query<Answer>(
       `
-      INSERT INTO teste.answers
+      INSERT INTO ${SCHEMA_QUALIDADE}.answers
       (
         form_id,
         nome,
@@ -63,7 +69,6 @@ export class AnswerRepository {
     );
     
     const answer = result.rows[0];
-    console.log("Criado category: ", answer);
 
     await Promise.all([
       cache.set(cacheKeys.byId(answer.id), answer, CACHE_TTL),
@@ -86,7 +91,7 @@ export class AnswerRepository {
     const result = await pool.query<Answer>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answers
+      FROM ${SCHEMA_QUALIDADE}.answers
       WHERE id = $1
       `,
       [id],
@@ -123,7 +128,7 @@ export class AnswerRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.answers
+      FROM ${SCHEMA_QUALIDADE}.answers
       ORDER BY data_criacao DESC
     `;
 
@@ -143,7 +148,7 @@ export class AnswerRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.answers
+        FROM ${SCHEMA_QUALIDADE}.answers
         `,
       ),
     ]);
@@ -166,7 +171,7 @@ export class AnswerRepository {
   async update(id: string, dto: UpdateAnswerDTO): Promise<Answer | null> {
     const result = await pool.query<Answer>(
       `
-      UPDATE teste.answers
+      UPDATE ${SCHEMA_QUALIDADE}.answers
       SET
         form_id = COALESCE($2, form_id),
         nome = COALESCE($3, nome),
@@ -210,7 +215,7 @@ export class AnswerRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.answers
+      DELETE FROM ${SCHEMA_QUALIDADE}.answers
       WHERE id = $1
       `,
       [id],

@@ -3,6 +3,12 @@ import { PoolClient } from "pg";
 
 import { SeniorRepository } from "../repositories/senior.repository";
 import { PostgresRepository } from "../repositories/postgres.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 export class SeniorSyncService {
   constructor(
@@ -226,7 +232,7 @@ export class SeniorSyncService {
         if (removedIds.length) {
           await client.query(
             `
-                          DELETE FROM teste.employees
+                          DELETE FROM ${SCHEMA_UNICO}.employees
                           WHERE id = ANY($1)
                         `,
             [removedIds],
@@ -235,7 +241,7 @@ export class SeniorSyncService {
 
         await client.query(
           `
-                      INSERT INTO teste.sync_logs (
+                      INSERT INTO ${SCHEMA_UNICO}.sync_logs (
                         started_at,
                         finished_at,
                         duration_ms,
@@ -308,7 +314,7 @@ export class SeniorSyncService {
 
       await client.query(
         `
-      INSERT INTO teste.employers (
+      INSERT INTO ${SCHEMA_UNICO}.employers (
         id,
         trading_name
       )
@@ -350,7 +356,7 @@ export class SeniorSyncService {
 
       await client.query(
         `
-      INSERT INTO teste.departments (
+      INSERT INTO ${SCHEMA_UNICO}.departments (
         id,
         name
       )
@@ -392,7 +398,7 @@ export class SeniorSyncService {
 
       await client.query(
         `
-                INSERT INTO teste.job_positions (
+                INSERT INTO ${SCHEMA_UNICO}.job_positions (
                   id,
                   name
                 )
@@ -434,7 +440,7 @@ export class SeniorSyncService {
 
       await client.query(
         `
-                INSERT INTO teste.cost_centers (
+                INSERT INTO ${SCHEMA_UNICO}.cost_centers (
                   id,
                   name
                 )
@@ -476,7 +482,7 @@ export class SeniorSyncService {
 
       await client.query(
         `
-                INSERT INTO teste.workshifts (
+                INSERT INTO ${SCHEMA_UNICO}.workshifts (
                   id,
                   description
                 )
@@ -518,7 +524,7 @@ export class SeniorSyncService {
 
       await client.query(
         `
-                INSERT INTO teste.workstation_groups (
+                INSERT INTO ${SCHEMA_UNICO}.workstation_groups (
                   id,
                   name
                 )
@@ -574,7 +580,7 @@ export class SeniorSyncService {
 
       await client.query(
         `
-          INSERT INTO teste.employees (
+          INSERT INTO ${SCHEMA_UNICO}.employees (
             id,
 
             company_number,

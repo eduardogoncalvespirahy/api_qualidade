@@ -20,11 +20,7 @@ export function authMiddleware(
     });
   }
   
-  console.log("Authorization:", authorization);
-
   const [scheme, token] = authorization.split(" ");
-
-  console.log("Token:", token);  
 
   if (scheme !== "Bearer" || !token) {
     return res.status(401).json({

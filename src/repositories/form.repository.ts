@@ -2,6 +2,12 @@ import { pool } from "../config/database";
 import { PaginatedResult } from "../models/paginate.model";
 import { Form, CreateFormDTO, UpdateFormDTO } from "../models/form.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -36,7 +42,7 @@ export class FormRepository {
   async create(dto: CreateFormDTO): Promise<Form> {
     const result = await pool.query<Form>(
       `
-      INSERT INTO teste.forms
+      INSERT INTO ${SCHEMA_QUALIDADE}.forms
       (
         section_id,
         nome,
@@ -78,7 +84,7 @@ export class FormRepository {
     const result = await pool.query<Form>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.forms
+      FROM ${SCHEMA_QUALIDADE}.forms
       WHERE id = $1
       `,
       [id],
@@ -112,7 +118,7 @@ export class FormRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.forms
+      FROM ${SCHEMA_QUALIDADE}.forms
       ORDER BY data_criacao DESC
     `;
 
@@ -132,7 +138,7 @@ export class FormRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.forms
+        FROM ${SCHEMA_QUALIDADE}.forms
         `,
       ),
     ]);
@@ -155,7 +161,7 @@ export class FormRepository {
   async update(id: string, dto: UpdateFormDTO): Promise<Form | null> {
     const result = await pool.query<Form>(
       `
-      UPDATE teste.forms
+      UPDATE ${SCHEMA_QUALIDADE}.forms
       SET
         section_id = COALESCE($2, section_id),
         nome = COALESCE($3, nome),
@@ -197,7 +203,7 @@ export class FormRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.forms
+      DELETE FROM ${SCHEMA_QUALIDADE}.forms
       WHERE id = $1
       `,
       [id],

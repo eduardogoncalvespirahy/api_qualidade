@@ -6,6 +6,12 @@ import {
   UpdateWorkshiftDTO,
 } from "../models/workshift.model";
 import { RedisRepository } from "./redis.repository";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const SCHEMA_UNICO = String(process.env.schema_unico);
+const SCHEMA_QUALIDADE = String(process.env.schema_qualidade);
 
 const cache = new RedisRepository();
 
@@ -35,7 +41,7 @@ export class WorkshiftRepository {
   async create(dto: CreateWorkshiftDTO): Promise<Workshift> {
     const result = await pool.query<Workshift>(
       `
-      INSERT INTO teste.workshifts
+      INSERT INTO ${SCHEMA_UNICO}.workshifts
       (
         id,
         description
@@ -76,7 +82,7 @@ export class WorkshiftRepository {
     const result = await pool.query<Workshift>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.workshifts
+      FROM ${SCHEMA_UNICO}.workshifts
       WHERE id = $1
       `,
       [id],
@@ -113,7 +119,7 @@ export class WorkshiftRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM teste.workshifts
+      FROM ${SCHEMA_UNICO}.workshifts
       ORDER BY id ASC
     `;
 
@@ -133,7 +139,7 @@ export class WorkshiftRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM teste.workshifts
+        FROM ${SCHEMA_UNICO}.workshifts
         `,
       ),
     ]);
@@ -156,7 +162,7 @@ export class WorkshiftRepository {
   async update(id: string, dto: UpdateWorkshiftDTO): Promise<Workshift | null> {
     const result = await pool.query<Workshift>(
       `
-      UPDATE teste.workshifts
+      UPDATE ${SCHEMA_UNICO}.workshifts
       SET
         description = COALESCE($2, description)
       WHERE id = $1
@@ -188,7 +194,7 @@ export class WorkshiftRepository {
 
     await pool.query(
       `
-      DELETE FROM teste.workshifts
+      DELETE FROM ${SCHEMA_UNICO}.workshifts
       WHERE id = $1
       `,
       [id],
