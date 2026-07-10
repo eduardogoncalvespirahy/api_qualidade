@@ -46,7 +46,7 @@ export class SectionRepository {
   async create(dto: CreateSectionDTO): Promise<Section> {
     const result = await pool.query<Section>(
       `
-      INSERT INTO ${SCHEMA_UNICO}.sections
+      INSERT INTO ${SCHEMA_QUALIDADE}.sections
       (
         employer_id,
         nome,
@@ -88,7 +88,7 @@ export class SectionRepository {
     const result = await pool.query<Section>(
       `
       SELECT ${SELECT_COLUMNS}
-      FROM ${SCHEMA_UNICO}.sections
+      FROM ${SCHEMA_QUALIDADE}.sections
       WHERE id = $1
       `,
       [id],
@@ -125,7 +125,7 @@ export class SectionRepository {
 
     let query = `
       SELECT ${SELECT_COLUMNS}
-      FROM ${SCHEMA_UNICO}.sections
+      FROM ${SCHEMA_QUALIDADE}.sections
       ORDER BY data_criacao DESC
     `;
 
@@ -145,7 +145,7 @@ export class SectionRepository {
       pool.query<{ total: string }>(
         `
         SELECT COUNT(*) AS total
-        FROM ${SCHEMA_UNICO}.sections
+        FROM ${SCHEMA_QUALIDADE}.sections
         `,
       ),
     ]);
@@ -168,7 +168,7 @@ export class SectionRepository {
   async update(id: string, dto: UpdateSectionDTO): Promise<Section | null> {
     const result = await pool.query<Section>(
       `
-      UPDATE ${SCHEMA_UNICO}.sections
+      UPDATE ${SCHEMA_QUALIDADE}.sections
       SET
         employer_id = COALESCE($2, employer_id),
         nome = COALESCE($3, nome),
@@ -210,7 +210,7 @@ export class SectionRepository {
 
     await pool.query(
       `
-      DELETE FROM ${SCHEMA_UNICO}.sections
+      DELETE FROM ${SCHEMA_QUALIDADE}.sections
       WHERE id = $1
       `,
       [id],
