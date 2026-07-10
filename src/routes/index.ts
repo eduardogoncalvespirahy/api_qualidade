@@ -24,6 +24,7 @@ import machineAnswerRoutes from "./machineAnswer.routes";
 import machineAnswerResultRoutes from "./machineAnswerResult.routes";
 import formTimeRoutes from "./formTime.routes";
 import formDraftRoutes from "./formDraft.routes";
+import repairerAnswerResult from "./repairerAnswerResult.routes";
 
 // Autenticação / autorização
 import credentialRoutes from "./credential.routes";
@@ -70,6 +71,7 @@ router.use("/machine-answers", machineAnswerRoutes);
 router.use("/machine-answer-result", machineAnswerResultRoutes);
 router.use("/form-time", formTimeRoutes);
 router.use("/form-drafts", formDraftRoutes);
+router.use("/repairer-answer-result", repairerAnswerResult);
 
 router.use("/credentials", credentialRoutes);
 router.use("/credentials-roles", credentialRoleRoutes);
