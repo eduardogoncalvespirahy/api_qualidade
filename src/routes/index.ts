@@ -40,7 +40,6 @@ import costCenterRoutes from "./costCenter.routes";
 import workshiftRoutes from "./workshift.routes";
 import workstationGroupRoutes from "./workstationGroup.routes";
 import syncLogRoutes from "./syncLog.routes";
-import faceRoutes from "./face.routes";
 import FileRoutes from "./file.routes";
 import credentialLocationRoutes from "./credentialLocation.routes";
 import statusRoutes from "./status.routes";
@@ -91,8 +90,5 @@ router.use("/workstation-groups", workstationGroupRoutes);
 router.use("/sync-logs", syncLogRoutes);
 
 router.use("/files", FileRoutes);
-
-// reconhecimento facial: /auth/face e /face/enroll/:userId
-router.use(faceRoutes);
 
 export default router;

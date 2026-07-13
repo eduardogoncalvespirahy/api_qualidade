@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import cron from "node-cron";
-import { SeniorSyncService } from "../services/seniorPG.service";
+import { SeniorSyncService } from "../services/seniorPostgre.service";
 
 dotenv.config();
 

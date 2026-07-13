@@ -109,7 +109,8 @@ export class CredentialRepository {
       `
       SELECT ${SELECT_COLUMNS}
       FROM ${SCHEMA_UNICO}.credentials
-      WHERE user_id = $1
+      WHERE user_id = $1 
+      AND status = 1
       ORDER BY data_criacao DESC
       `,
       [userId],
@@ -128,6 +129,8 @@ export class CredentialRepository {
       FROM ${SCHEMA_UNICO}.credentials
       WHERE user_id = $1
       AND system_id = $2
+      AND status = 1
+      ORDER BY data_criacao DESC      
       `,
       [userId, systemId],
     );
