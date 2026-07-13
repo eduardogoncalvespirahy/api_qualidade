@@ -56,7 +56,7 @@ export class RepairerAnswerResultController {
     }
   };
 
-  answerResultId = async (req: Request, res: Response): Promise<Response> => {
+  findByAnswerResultId = async (req: Request, res: Response): Promise<Response> => {
     try {
       const answerResultId = req.params.answerResultId as string;
 
