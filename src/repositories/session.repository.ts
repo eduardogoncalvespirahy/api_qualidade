@@ -255,4 +255,28 @@ export class SessionRepository {
 
     return session;
   }
+
+  async deleteByRefreshToken(refreshToken: string): Promise<Session | null> {
+    const session = await this.findByRefreshToken(refreshToken);
+
+    if (!session) {
+      return null;
+    }
+
+    await pool.query(
+      `
+      DELETE FROM ${SCHEMA_UNICO}.sessions
+      WHERE refreshtoken = $1
+      `,
+      [refreshToken],
+    );
+
+    await Promise.all([
+      cache.delete(cacheKeys.byId(session.id)),
+      cache.delete(cacheKeys.byRefreshToken(refreshToken)),
+      this.invalidateListCache(),
+    ]);
+
+    return session;
+  }
 }

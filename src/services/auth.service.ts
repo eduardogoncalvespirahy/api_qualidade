@@ -33,56 +33,133 @@ export class AuthService {
     const user = dto.email
       ? await this.users.findByEmail(dto.email)
       : dto.username
-      ? await this.users.findByUsername(dto.username)
-      : dto.registerNumber !== undefined
-      ? await this.users.findByRegisterNumber(dto.registerNumber)      
-      : null;
+        ? await this.users.findByUsername(dto.username)
+        : dto.registerNumber !== undefined
+          ? await this.users.findByRegisterNumber(dto.registerNumber)
+          : null;
 
     if (!user) {
-      throw new Error(`Usuario ${dto.email??dto.username??dto.registerNumber} não encontrado`);
+      throw new Error(
+        `Usuario ${dto.email ?? dto.username ?? dto.registerNumber} não encontrado`,
+      );
     }
 
     // dto.systemId = dto.systemId ? dto.systemId : String(SYSTEM_ID);
 
     const credential = dto.systemId
       ? await this.credentials.findByUserAndSystem(user.id, dto.systemId)
-      : (await this.credentials.findByUserId(user.id))[0] ?? null;
+      : ((await this.credentials.findByUserId(user.id))[0] ?? null);
 
     if (!credential) {
       throw new Error("Credenciais inválidas");
     }
 
-    const validPassword = await bcrypt.compare(dto.password, credential.senhaHash);
+    const validPassword = await bcrypt.compare(
+      dto.password,
+      credential.senhaHash,
+    );
     if (!validPassword) {
       throw new Error("Credenciais inválidas");
     }
 
-    const roles = await this.credentialRoles.findRoleNamesByCredential(credential.id);
+    const roles = await this.credentialRoles.findRoleNamesByCredential(
+      credential.id,
+    );
 
-    const payload: JwtPayload = {
-      id: user.id,
-      roles,
+    const token = this.signAccessToken(user.id, roles);
+    const refreshToken = await this.createSession(credential.id);
+
+    await this.credentials.touchLastLogin(credential.id);
+
+    return {
+      userId: user.id,
+      credentialId: credential.id,
+      token,
+      refreshToken,
     };
+  }
 
-    const userId = user.id;
-    const credentialId = credential.id;
+  /**
+   * Emite um novo access token a partir de um refresh token válido.
+   * Faz ROTAÇÃO: o refresh recebido é invalidado e um novo é gerado. Assim,
+   * se um refresh vazar, ele deixa de valer assim que for usado uma vez.
+   */
+  async refresh(refreshToken?: string | null): Promise<LoginResponseDTO> {
+    if (!refreshToken) {
+      throw new Error("Refresh token ausente");
+    }
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET!, {
-      expiresIn: "1d",
-    });
+    const session = await this.sessions.findByRefreshToken(refreshToken);
+    if (!session) {
+      throw new Error("Sessão inválida");
+    }
 
+    // Expirou? remove a sessão e recusa.
+    if (new Date(session.expira).getTime() <= Date.now()) {
+      await this.sessions.deleteByRefreshToken(refreshToken);
+      throw new Error("Sessão expirada");
+    }
+
+    const credential = await this.credentials.findById(session.credentialId);
+    if (!credential) {
+      // Sessão órfã: limpa e recusa.
+      await this.sessions.deleteByRefreshToken(refreshToken);
+      throw new Error("Credencial não encontrada");
+    }
+
+    const user = await this.users.findById(credential.userId);
+    if (!user) {
+      await this.sessions.deleteByRefreshToken(refreshToken);
+      throw new Error("Usuário não encontrado");
+    }
+
+    const roles = await this.credentialRoles.findRoleNamesByCredential(
+      credential.id,
+    );
+
+    const token = this.signAccessToken(user.id, roles);
+
+    // Rotação: invalida o refresh atual e cria um novo.
+    await this.sessions.deleteByRefreshToken(refreshToken);
+    const newRefreshToken = await this.createSession(credential.id);
+
+    await this.credentials.touchLastLogin(credential.id);
+
+    return {
+      userId: user.id,
+      credentialId: credential.id,
+      token,
+      refreshToken: newRefreshToken,
+    };
+  }
+
+  /** Logout: invalida a sessão associada ao refresh token (se existir). */
+  async logout(refreshToken?: string | null): Promise<void> {
+    if (refreshToken) {
+      await this.sessions.deleteByRefreshToken(refreshToken);
+    }
+  }
+
+  // ───────── helpers ─────────
+
+  /** Assina o JWT de acesso (mesma regra do login: expira em 1 dia). */
+  private signAccessToken(userId: string, roles: string[]): string {
+    const payload: JwtPayload = { id: userId, roles };
+    return jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn: "1d" });
+  }
+
+  /** Cria uma sessão nova (refresh token opaco) e devolve o token gerado. */
+  private async createSession(credentialId: string): Promise<string> {
     const refreshToken = crypto.randomBytes(48).toString("hex");
     const expira = new Date();
     expira.setDate(expira.getDate() + REFRESH_TTL_DAYS);
 
     await this.sessions.create({
-      credentialId: credential.id,
+      credentialId,
       refreshtoken: refreshToken,
       expira,
     });
 
-    await this.credentials.touchLastLogin(credential.id);
-
-    return { userId, credentialId, token, refreshToken };
+    return refreshToken;
   }
 }
