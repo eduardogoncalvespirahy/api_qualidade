@@ -31,6 +31,7 @@ const cacheKeys = {
 const SELECT_COLUMNS = `
   id,
   machine_id as "machineId",
+  user_id as "userId",  
   hora_inicio as "horaInicio",
   hora_fim as "horaFim",
   motivo,
@@ -50,6 +51,7 @@ export class BreakMachineRepository {
       INSERT INTO ${SCHEMA_QUALIDADE}.breaks_machines
       (
         machine_id,
+        user_id,
         hora_inicio,
         hora_fim,
         motivo,
@@ -61,12 +63,14 @@ export class BreakMachineRepository {
         $2,
         $3,
         $4,
-        COALESCE($5, 1)
+        $5,
+        COALESCE($6, 1)
       )
       RETURNING ${SELECT_COLUMNS}
       `,
       [
         dto.machineId,
+        dto.userId,
         dto.horaInicio,
         dto.horaFim ?? null,
         dto.motivo,
@@ -197,10 +201,11 @@ export class BreakMachineRepository {
       UPDATE ${SCHEMA_QUALIDADE}.breaks_machines
       SET
         machine_id = COALESCE($2, machine_id),
-        hora_inicio = COALESCE($3, hora_inicio),
-        hora_fim = COALESCE($4, hora_fim),
-        motivo = COALESCE($5, motivo),
-        status = COALESCE($6, status),
+        user_id = COALESCE($3, machine_id),
+        hora_inicio = COALESCE($4, hora_inicio),
+        hora_fim = COALESCE($5, hora_fim),
+        motivo = COALESCE($6, motivo),
+        status = COALESCE($7, status),
         data_alteracao = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
@@ -208,6 +213,7 @@ export class BreakMachineRepository {
       [
         id,
         dto.machineId ?? null,
+        dto.userId ?? null,
         dto.horaInicio ?? null,
         dto.horaFim ?? null,
         dto.motivo ?? null,

@@ -31,6 +31,7 @@ const cacheKeys = {
 const SELECT_COLUMNS = `
   id,
   form_id as "formId",
+  user_id as "userId",
   hora_inicio as "horaInicio",
   hora_fim as "horaFim",
   motivo,
@@ -50,6 +51,7 @@ export class BreakFormRepository {
       INSERT INTO ${SCHEMA_QUALIDADE}.breaks_forms
       (
         form_id,
+        user_id,
         hora_inicio,
         hora_fim,
         motivo,
@@ -61,12 +63,14 @@ export class BreakFormRepository {
         $2,
         $3,
         $4,
-        COALESCE($5, 1)
+        $5,
+        COALESCE($6, 1)
       )
       RETURNING ${SELECT_COLUMNS}
       `,
       [
         dto.formId,
+        dto.userId,
         dto.horaInicio,
         dto.horaFim,
         dto.motivo ?? null,
@@ -194,10 +198,11 @@ export class BreakFormRepository {
       UPDATE ${SCHEMA_QUALIDADE}.breaks_forms
       SET
         form_id = COALESCE($2, form_id),
-        hora_inicio = COALESCE($3, hora_inicio),
-        hora_fim = COALESCE($4, hora_fim),
-        motivo = COALESCE($5, motivo),
-        status = COALESCE($6, status),
+        user_id = COALESCE($3, user_id),
+        hora_inicio = COALESCE($4, hora_inicio),
+        hora_fim = COALESCE($5, hora_fim),
+        motivo = COALESCE($6, motivo),
+        status = COALESCE($7, status),
         data_alteracao = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING ${SELECT_COLUMNS}
@@ -205,6 +210,7 @@ export class BreakFormRepository {
       [
         id,
         dto.formId ?? null,
+        dto.userId ?? null,
         dto.horaInicio ?? null,
         dto.horaFim ?? null,
         dto.motivo ?? null,

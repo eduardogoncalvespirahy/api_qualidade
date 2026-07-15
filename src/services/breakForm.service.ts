@@ -18,9 +18,17 @@ export class BreakFormService {
       throw new Error("O campo 'formId' é obrigatório");
     }
 
+    if (!dto.userId) {
+      throw new Error("O campo 'userId' é obrigatório");
+    }    
+
     if (!dto.horaInicio) {
       throw new Error("O campo 'horaInicio' é obrigatório");
     }
+
+    if (!dto.motivo) {
+      throw new Error("O campo 'motivo' é obrigatório");
+    }        
 
     return this.repository.create(dto);
   }
