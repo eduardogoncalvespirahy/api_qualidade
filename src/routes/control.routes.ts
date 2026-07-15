@@ -11,7 +11,7 @@ router.get("/", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), 
 router.get("/form/:formId", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findByFormId);
 router.get("/user/:userId", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findByUserId);
 router.get("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.findById);
-router.put("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER"]), controller.update);
+router.put("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER", "INSPETOR"]), controller.update);
 router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN", "LIDER"]), controller.delete);
 
 export default router;
