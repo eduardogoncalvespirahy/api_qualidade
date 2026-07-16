@@ -37,7 +37,8 @@ const cacheKeys = {
 const SELECT_COLUMNS = `
   answer_result_id as "answerResultId",
   user_id as "userId",
-  data_criacao as "dataCriacao"
+  data_criacao as "dataCriacao",
+  observacao
 `;
 
 export class RepairerAnswerResultRepository {
@@ -53,16 +54,18 @@ export class RepairerAnswerResultRepository {
       INSERT INTO ${SCHEMA_QUALIDADE}.repairer_answer_result
       (
         answer_result_id,
-        user_id
+        user_id,
+        observacao
       )
       VALUES
       (
         $1,
-        $2
+        $2,
+        $3
       )
       RETURNING ${SELECT_COLUMNS}
       `,
-      [dto.answerResultId, dto.userId],
+      [dto.answerResultId, dto.userId, dto.observacao ?? null],
     );
 
     const repairerAnswerResult = result.rows[0];
@@ -259,11 +262,18 @@ export class RepairerAnswerResultRepository {
     SET
         answer_result_id = COALESCE($3,answer_result_id),
         user_id = COALESCE($4,user_id),
-        data_criacao = CURRENT_TIMESTAMP
+        data_criacao = CURRENT_TIMESTAMP,
+        observacao = COALESCE($5,observacao)
     WHERE answer_result_id = $1 and user_id = $2
       RETURNING ${SELECT_COLUMNS}
       `,
-      [answerResultId, userId, dto.answerResultId ?? null, dto.userId ?? null],
+      [
+        answerResultId,
+        userId,
+        dto.answerResultId ?? null,
+        dto.userId ?? null,
+        dto.observacao ?? null,
+      ],
     );
 
     const RepairerAnswerResult = result.rows[0];
