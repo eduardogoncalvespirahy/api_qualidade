@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { FormDraftController } from "../controllers/formDraft.controllers";
+import { FormDraftController } from "../controllers/formDraft.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { roleMiddleware } from "../middlewares/role.middleware";
 
