@@ -20,9 +20,9 @@ export class FormGroupItemsService {
     if (!dto.formId) {
       throw new Error("O campo 'formId' é obrigatório");
     }
-    if (!dto.ordem) {
-      throw new Error("O campo 'ordem' é obrigatório");
-    }
+    // if (!dto.ordem) {
+    //   throw new Error("O campo 'ordem' é obrigatório");
+    // }
     return this.repository.create(dto);
   }
 
